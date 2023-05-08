@@ -3,9 +3,9 @@
 namespace LegendaryTools.Systems
 {
     [Serializable]
-    public class AttributeModifierCondition<T>
+    public class AttributeModifierCondition<Tid>
     {
-        public T AttributeName;
+        public Tid AttributeName;
         public AttributeModOperator Operator;
         public float Value;
     }

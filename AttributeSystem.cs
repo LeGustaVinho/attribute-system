@@ -1,24 +1,39 @@
-﻿using System.Collections.Generic;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
-    public class AttributeSystem<T>
+    public interface IAttributeSystem<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>
+        where TAttr :  Attribute<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>
+        where TAttrCond : AttributeCondition<Tid, TModCond>
+        where TModCond : AttributeModifierCondition<Tid>
+        where TAttrConfig : AttributeConfig<Tid>
     {
-        private readonly Dictionary<T, Attribute<T>> attributesFinderCache = new Dictionary<T, Attribute<T>>();
-        public List<Attribute<T>> Attributes = new List<Attribute<T>>();
-
-        public void AddModifiers(AttributeSystem<T> attributeSystem)
+        List<TAttr> AttributesList { get; }
+        
+        public TAttr GetAttributeByID(Tid attributeName);
+    }
+    
+    public class AttributeSystem
+    {
+        public static void AddModifiers<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>(
+            IAttributeSystem<Tid, TAttr, TAttrCond, TModCond, TAttrConfig> target,
+            IAttributeSystem<Tid, TAttr, TAttrCond, TModCond, TAttrConfig> source)
+            where TAttr :  Attribute<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>
+            where TAttrCond : AttributeCondition<Tid, TModCond>
+            where TModCond : AttributeModifierCondition<Tid>
+            where TAttrConfig : AttributeConfig<Tid>
         {
-            List<Attribute<T>> allModifiers =
-                attributeSystem.Attributes.FindAll(item => item.Type == AttributeType.Modifier);
+            List<TAttr> allModifiers =
+                source.AttributesList.FindAll(item => item.Type == AttributeType.Modifier);
 
-            Attribute<T> currentAttribute = null;
+            TAttr currentAttribute = null;
             for (int i = 0; i < allModifiers.Count; i++)
             {
                 for (int j = 0; j < allModifiers[i].TargetAttributeModifier.Count; j++)
                 {
-                    currentAttribute = GetAttributeByID(allModifiers[i].TargetAttributeModifier[j].TargetAttributeID);
+                    currentAttribute = target.GetAttributeByID(allModifiers[i].TargetAttributeModifier[j].TargetAttributeID);
                     if (currentAttribute != null)
                     {
                         currentAttribute.AddModifier(allModifiers[i], allModifiers[i].TargetAttributeModifier[j]);
@@ -27,48 +42,20 @@ namespace LegendaryTools.Systems
             }
         }
 
-        public void RemoveModifiers(AttributeSystem<T> attributeSystem)
+        public static void RemoveModifiers<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>(
+            IAttributeSystem<Tid, TAttr, TAttrCond, TModCond, TAttrConfig> target,
+            IAttributeSystem<Tid, TAttr, TAttrCond, TModCond, TAttrConfig> source)
+            where TAttr :  Attribute<Tid, TAttr, TAttrCond, TModCond, TAttrConfig>
+            where TAttrCond : AttributeCondition<Tid, TModCond>
+            where TModCond : AttributeModifierCondition<Tid>
+            where TAttrConfig : AttributeConfig<Tid>
         {
-            for (int i = 0; i < Attributes.Count; i++)
+            for (int i = 0; i < target.AttributesList.Count; i++)
             {
-                if (Attributes[i].Modifiers.Count > 0)
+                if (target.AttributesList[i].Modifiers.Count > 0)
                 {
-                    Attributes[i].RemoveModifiers(attributeSystem);
+                    target.AttributesList[i].RemoveModifiers(source);
                 }
-            }
-        }
-
-        public Attribute<T> GetAttributeByID(T attributeName)
-        {
-            if (attributesFinderCache.ContainsKey(attributeName))
-            {
-                return attributesFinderCache[attributeName];
-            }
-
-            Attribute<T> attr = null;
-            foreach (Attribute<T> attribute in Attributes)
-            {
-                if (attribute.Config.ID.Equals(attributeName))
-                {
-                    attr = attribute;
-                }
-            }
-
-            if (attr != null)
-            {
-                attributesFinderCache.Add(attributeName, attr);
-                return attr;
-            }
-
-            Debug.LogError("[AttributeSystem:GetAttributeByID(" + attributeName + ") -> Not found");
-            return null;
-        }
-
-        protected void updateAttributeCache()
-        {
-            for (int i = 0; i < Attributes.Count; i++)
-            {
-                attributesFinderCache.Add(Attributes[i].Config.ID, Attributes[i]);
             }
         }
     }

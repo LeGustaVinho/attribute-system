@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace LegendaryTools.Systems
@@ -28,47 +29,74 @@ namespace LegendaryTools.Systems
         RemoveFlag,
         Set
     }
-
-    public class Attribute<T>
+    
+    public abstract class Attribute<TID, TAttr, TAttrCond, TModCond, TAttrConfig>
+        where TAttr :  Attribute<TID, TAttr, TAttrCond, TModCond, TAttrConfig>
+        where TAttrCond : AttributeCondition<TID, TModCond>
+        where TModCond : AttributeModifierCondition<TID>
+        where TAttrConfig : AttributeConfig<TID>
     {
-        /// Lists all modifiers that are currently changing this attribute
-        public readonly List<Attribute<T>> Modifiers = new List<Attribute<T>>();
-
-        public float Capacity;
+        [Required]
+        public TAttrConfig Config;
+        
+        public AttributeType Type = AttributeType.Attribute;
+        
+        [VerticalGroup("Values")]
+        public float Flat;
+        [VerticalGroup("Values")][HideIf("HasOptions")]
         public float Factor = 0;
 
+        [VerticalGroup("Values")][ShowIf("HasCapacity")]
+        public float Capacity;
+
+        [VerticalGroup("Modifiers")][ShowIf("Type", AttributeType.Modifier)]
+        //List the conditions that this modifier needs to find to be applied
+        public List<TAttrCond> TargetAttributeModifier = new List<TAttrCond>();
+        
+        [VerticalGroup("Modifiers")][ShowIf("HasOptions")]
         public AttributeFlagModOperator FlagOperator = AttributeFlagModOperator.AddFlag;
 
-        public float Flat;
+        //Lists all modifiers that are currently changing this attribute
+        [ShowInInspector][VerticalGroup("Modifiers")]
+        public readonly List<TAttr> Modifiers = new List<TAttr>();
+        
+        public IAttributeSystem<TID, TAttr, TAttrCond, TModCond,TAttrConfig> Parent { get; protected set; }
 
-        /// List the conditions that this modifier needs to find to be applied
-        public List<AttributeCondition<T>> TargetAttributeModifier = new List<AttributeCondition<T>>();
+        //Returns the current value of the attribute taking into account all modifiers currently applied
+        [ShowInInspector][VerticalGroup("Values")]
+        public float Value => GetValueWithModifiers();
 
-        public AttributeType Type = AttributeType.Attribute;
+        [ShowInInspector]
+        [VerticalGroup("Values")]
+        [ShowIf("HasOptions")]
+        public string ValueAsOption
+        {
+            get
+            {
+                if (Config == null) return string.Empty;
+                int index = (int)GetValueWithModifiers();
+                if (index >= Config.Options.Count) return string.Empty;
+                return Config.Options[index];
+            }
+        }
 
-        public Attribute(AttributeSystem<T> parent, AttributeConfig<T> config)
+        private bool CanUseCapacity => HasCapacity && Type == AttributeType.Attribute && !HasOptions;
+
+        private bool HasOptions => Config?.HasOptions ?? false;
+
+        private bool HasCapacity => Config?.HasCapacity ?? false;
+
+        public event Action<TAttr> OnAttributeModAdd;
+        public event Action<TAttr> OnAttributeModRemove;
+        public event Action<float, float> OnAttributeCapacityChange;
+        
+        public Attribute(IAttributeSystem<TID, TAttr, TAttrCond, TModCond, TAttrConfig> parent, TAttrConfig config)
         {
             Parent = parent;
             Config = config;
         }
 
-        public AttributeSystem<T> Parent { get; protected set; }
-        public AttributeConfig<T> Config { get; protected set; }
-
-        /// Returns the current value of the attribute taking into account all modifiers currently applied
-        public float Value => getValueWithModifiers();
-
-        private bool CanUseCapacity => HasCapacity && Type == AttributeType.Attribute && !HasFlags;
-
-        private bool HasFlags => Config?.HasFlags ?? false;
-
-        private bool HasCapacity => Config?.HasCapacity ?? false;
-
-        public event Action<Attribute<T>> OnAttributeModAdd;
-        public event Action<Attribute<T>> OnAttributeModRemove;
-        public event Action<float, float> OnAttributeCapacityChange;
-
-        public void AddModifier(Attribute<T> attribute, AttributeCondition<T> modifier = null)
+        public void AddModifier(TAttr attribute, TAttrCond modifier = null)
         {
             if (!ModApplicationCanBeAccepted(attribute, modifier))
             {
@@ -80,7 +108,7 @@ namespace LegendaryTools.Systems
             OnAttributeModAdd?.Invoke(attribute);
         }
 
-        public void RemoveModifier(Attribute<T> attribute)
+        public void RemoveModifier(TAttr attribute)
         {
             if (!Modifiers.Contains(attribute))
             {
@@ -92,15 +120,15 @@ namespace LegendaryTools.Systems
             OnAttributeModRemove?.Invoke(attribute);
         }
 
-        public void RemoveModifiers(AttributeSystem<T> attributeSystem)
+        public void RemoveModifiers(IAttributeSystem<TID, TAttr, TAttrCond, TModCond, TAttrConfig> attributeSystem)
         {
-            List<Attribute<T>> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
+            List<TAttr> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
 
             Modifiers.RemoveAll(item => item.Parent == attributeSystem);
 
-            for (int i = 0; i < 0; i++)
+            foreach (TAttr attr in modsToRemove)
             {
-                OnAttributeModRemove?.Invoke(modsToRemove[i]);
+                OnAttributeModRemove?.Invoke(attr);
             }
         }
 
@@ -141,7 +169,7 @@ namespace LegendaryTools.Systems
         }
 
         /// Checks whether the mod can be applied to the target entity
-        public bool ModApplicationCanBeAccepted(Attribute<T> attribute, AttributeCondition<T> modifier = null)
+        public bool ModApplicationCanBeAccepted(TAttr attribute, TAttrCond modifier = null)
         {
             if (modifier == null)
             {
@@ -150,7 +178,7 @@ namespace LegendaryTools.Systems
 
             if (modifier != null)
             {
-                Attribute<T> currentAttribute = null;
+                TAttr currentAttribute = null;
                 for (int i = 0; i < modifier.ModApplicationConditions.Count; i++)
                 {
                     currentAttribute = Parent.GetAttributeByID(modifier.ModApplicationConditions[i].AttributeName);
@@ -222,33 +250,41 @@ namespace LegendaryTools.Systems
         }
 
         /// Returns the current value of the attribute taking into account all modifiers currently applied
-        private float getValueWithModifiers()
+        private float GetValueWithModifiers()
         {
             if (Config == null)
             {
                 return 0;
             }
 
-            if (HasFlags)
+            if (HasOptions && Config.OptionsAreFlags)
             {
                 float currentFlag = Flat;
-                for (int i = 0; i < Modifiers.Count; i++)
+                if(Modifiers != null)
                 {
-                    switch (Modifiers[i].FlagOperator)
+                    for (int i = 0; i < Modifiers.Count; i++)
                     {
-                        case AttributeFlagModOperator.AddFlag:
-                            currentFlag = FlagUtil.Add(currentFlag, Modifiers[i].Flat);
-                            break;
-                        case AttributeFlagModOperator.RemoveFlag:
-                            currentFlag = FlagUtil.Remove(currentFlag, Modifiers[i].Flat);
-                            break;
-                        case AttributeFlagModOperator.Set:
-                            currentFlag = Modifiers[i].Flat;
-                            break;
+                        switch (Modifiers[i].FlagOperator)
+                        {
+                            case AttributeFlagModOperator.AddFlag:
+                                currentFlag = FlagUtil.Add(currentFlag, Modifiers[i].Flat);
+                                break;
+                            case AttributeFlagModOperator.RemoveFlag:
+                                currentFlag = FlagUtil.Remove(currentFlag, Modifiers[i].Flat);
+                                break;
+                            case AttributeFlagModOperator.Set:
+                                currentFlag = Modifiers[i].Flat;
+                                break;
+                        }
                     }
                 }
 
                 return currentFlag;
+            }
+            
+            if (Modifiers == null)
+            {
+                return 0;
             }
 
             Modifiers.Sort((a, b) => -1 * a.Factor.CompareTo(b.Factor)); //descending sort
