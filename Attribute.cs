@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR && ODIN_INSPECTOR
 using Sirenix.OdinInspector;
+#endif
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace LegendaryTools.Systems
@@ -30,73 +36,132 @@ namespace LegendaryTools.Systems
         Set
     }
     
-    public abstract class Attribute<TID, TAttr, TAttrCond, TModCond, TAttrConfig>
-        where TAttr :  Attribute<TID, TAttr, TAttrCond, TModCond, TAttrConfig>
-        where TAttrCond : AttributeCondition<TID, TModCond>
-        where TModCond : AttributeModifierCondition<TID>
-        where TAttrConfig : AttributeConfig<TID>
+    [Serializable]
+    public class Attribute
     {
-        [Required]
-        public TAttrConfig Config;
-        
+        public AttributeConfig Config;
         public AttributeType Type = AttributeType.Attribute;
         
-        [VerticalGroup("Values")]
         public float Flat;
-        [VerticalGroup("Values")][HideIf("HasOptions")]
         public float Factor = 0;
-
-        [VerticalGroup("Values")][ShowIf("HasCapacity")]
         public float Capacity;
-
-        [VerticalGroup("Modifiers")][ShowIf("Type", AttributeType.Modifier)]
-        //List the conditions that this modifier needs to find to be applied
-        public List<TAttrCond> TargetAttributeModifier = new List<TAttrCond>();
         
-        [VerticalGroup("Modifiers")][ShowIf("HasOptions")]
+        //List the conditions that this modifier needs to find to be applied
+        public List<AttributeCondition> TargetAttributeModifier = new List<AttributeCondition>();
+        
         public AttributeFlagModOperator FlagOperator = AttributeFlagModOperator.AddFlag;
 
         //Lists all modifiers that are currently changing this attribute
-        [ShowInInspector][VerticalGroup("Modifiers")]
-        public readonly List<TAttr> Modifiers = new List<TAttr>();
+        public readonly List<Attribute> Modifiers = new List<Attribute>();
         
-        public IAttributeSystem<TID, TAttr, TAttrCond, TModCond,TAttrConfig> Parent { get; protected set; }
+        public IAttributeSystem Parent { get; protected set; }
 
+        public int FlatAsOptionIndex
+        {
+            get => (int)Flat;
+            set => Flat = value;
+        }
+        
+        public int FlatAsOptionFlag
+        {
+            get => (int)Flat;
+            set => Flat = value;
+        }
+        
         //Returns the current value of the attribute taking into account all modifiers currently applied
-        [ShowInInspector][VerticalGroup("Values")]
         public float Value => GetValueWithModifiers();
-
-        [ShowInInspector]
-        [VerticalGroup("Values")]
-        [ShowIf("HasOptions")]
+        
         public string ValueAsOption
         {
             get
             {
                 if (Config == null) return string.Empty;
+                if (Config.Options == null) return string.Empty;
                 int index = (int)GetValueWithModifiers();
-                if (index >= Config.Options.Count) return string.Empty;
+                if (index >= Config.Options.Length || index < 0) return string.Empty;
                 return Config.Options[index];
             }
         }
-
-        private bool CanUseCapacity => HasCapacity && Type == AttributeType.Attribute && !HasOptions;
-
-        private bool HasOptions => Config?.HasOptions ?? false;
-
-        private bool HasCapacity => Config?.HasCapacity ?? false;
-
-        public event Action<TAttr> OnAttributeModAdd;
-        public event Action<TAttr> OnAttributeModRemove;
-        public event Action<float, float> OnAttributeCapacityChange;
         
-        public Attribute(IAttributeSystem<TID, TAttr, TAttrCond, TModCond, TAttrConfig> parent, TAttrConfig config)
+        public int ValueAsOptionFlag => (int)GetValueWithModifiers();
+
+        public bool CanUseCapacity => HasCapacity && Type == AttributeType.Attribute && !HasOptions;
+
+        public bool HasOptions => Config?.HasOptions ?? false;
+        public bool OptionsAreFlags => Config?.OptionsAreFlags ?? false;
+        
+    #if ODIN_INSPECTOR
+        public IEnumerable EditorOptions
+        {
+            get
+            {
+                ValueDropdownList<int> valueDropDownList = new ValueDropdownList<int>();
+                if (Config == null) return valueDropDownList;
+                if (Config.Options == null) return valueDropDownList;
+                for (int index = 0; index < Config.Options.Length; index++)
+                {
+                    valueDropDownList.Add(Config.Options[index], index);
+                }
+
+                return valueDropDownList;
+            }
+        }
+
+        public string[] EditorOptionsArray
+        {
+            get
+            {
+                if (Config == null) return new string[2] {"None", "Everything"};
+                if (Config.Options == null) return new string[2] {"None", "Everything"};
+
+                return Config.Options;
+            }
+        }
+    #endif
+
+        public bool HasCapacity => Config?.HasCapacity ?? false;
+
+        public event Action<Attribute> OnAttributeModAdd;
+        public event Action<Attribute> OnAttributeModRemove;
+        public event Action<float, float> OnAttributeCapacityChange;
+
+#if UNITY_EDITOR && ODIN_INSPECTOR
+        private int DrawFlatAsOptionFlag(int value, GUIContent label)
+        {
+            if (Config != null && Config.HasOptions && Config.OptionsAreFlags)
+            {
+                int flagResult = label == null
+                    ? EditorGUILayout.MaskField(value, EditorOptionsArray)
+                    : EditorGUILayout.MaskField(label, value, EditorOptionsArray);
+                return flagResult == -1 ? Config.FlagOptionEverythingValue : flagResult;
+            }
+
+            return 0;
+        }
+        
+        private int DrawValueAsOptionFlag(int value, GUIContent label)
+        {
+            if (Config != null && Config.HasOptions && Config.OptionsAreFlags)
+            {
+                GUI.enabled = false;
+                if (label == null)
+                    EditorGUILayout.MaskField(value == -1 ? Config.FlagOptionEverythingValue : value,
+                        EditorOptionsArray);
+                else    
+                    EditorGUILayout.MaskField(label, value == -1 ? Config.FlagOptionEverythingValue : value, EditorOptionsArray);
+                GUI.enabled = true;
+            }
+
+            return 0;
+        }
+#endif
+        public Attribute(IAttributeSystem parent, AttributeConfig config)
         {
             Parent = parent;
             Config = config;
         }
 
-        public void AddModifier(TAttr attribute, TAttrCond modifier = null)
+        public void AddModifier(Attribute attribute, AttributeCondition modifier = null)
         {
             if (!ModApplicationCanBeAccepted(attribute, modifier))
             {
@@ -108,7 +173,7 @@ namespace LegendaryTools.Systems
             OnAttributeModAdd?.Invoke(attribute);
         }
 
-        public void RemoveModifier(TAttr attribute)
+        public void RemoveModifier(Attribute attribute)
         {
             if (!Modifiers.Contains(attribute))
             {
@@ -120,13 +185,13 @@ namespace LegendaryTools.Systems
             OnAttributeModRemove?.Invoke(attribute);
         }
 
-        public void RemoveModifiers(IAttributeSystem<TID, TAttr, TAttrCond, TModCond, TAttrConfig> attributeSystem)
+        public void RemoveModifiers(AttributeSystem attributeSystem)
         {
-            List<TAttr> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
+            List<Attribute> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
 
             Modifiers.RemoveAll(item => item.Parent == attributeSystem);
 
-            foreach (TAttr attr in modsToRemove)
+            foreach (Attribute attr in modsToRemove)
             {
                 OnAttributeModRemove?.Invoke(attr);
             }
@@ -169,16 +234,16 @@ namespace LegendaryTools.Systems
         }
 
         /// Checks whether the mod can be applied to the target entity
-        public bool ModApplicationCanBeAccepted(TAttr attribute, TAttrCond modifier = null)
+        public bool ModApplicationCanBeAccepted(Attribute attribute, AttributeCondition modifier = null)
         {
             if (modifier == null)
             {
-                modifier = attribute.TargetAttributeModifier.Find(item => item.TargetAttributeID.Equals(Config.ID));
+                modifier = attribute.TargetAttributeModifier.Find(item => item.TargetAttributeID.Equals(Config));
             }
 
             if (modifier != null)
             {
-                TAttr currentAttribute = null;
+                Attribute currentAttribute = null;
                 for (int i = 0; i < modifier.ModApplicationConditions.Count; i++)
                 {
                     currentAttribute = Parent.GetAttributeByID(modifier.ModApplicationConditions[i].AttributeName);
@@ -249,6 +314,25 @@ namespace LegendaryTools.Systems
             return false;
         }
 
+        public Attribute Clone(IAttributeSystem parent)
+        {
+            Attribute clone = new Attribute(parent ?? Parent, Config)
+            {
+                Capacity = Capacity,
+                Factor = Factor,
+                Flat = Flat,
+                FlagOperator = FlagOperator,
+                Type = Type,
+            };
+
+            foreach (AttributeCondition targetAttributeModifier in TargetAttributeModifier)
+            {
+                clone.TargetAttributeModifier.Add(targetAttributeModifier.Clone());
+            }
+
+            return clone;
+        }
+
         /// Returns the current value of the attribute taking into account all modifiers currently applied
         private float GetValueWithModifiers()
         {
@@ -284,7 +368,7 @@ namespace LegendaryTools.Systems
             
             if (Modifiers == null)
             {
-                return 0;
+                return Mathf.Clamp(Flat * (1 + Factor), Config.MinMaxValue.x, Config.MinMaxValue.y);
             }
 
             Modifiers.Sort((a, b) => -1 * a.Factor.CompareTo(b.Factor)); //descending sort

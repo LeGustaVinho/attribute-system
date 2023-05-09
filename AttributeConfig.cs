@@ -3,12 +3,11 @@ using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
-    public class AttributeConfig<T> : ScriptableObject
+    [CreateAssetMenu(fileName = "New AttributeConfig", menuName = "Tools/AttributeSystem/AttributeConfig")]
+    public class AttributeConfig : ScriptableObject
     {
-        public T ID;
-
         public bool OptionsAreFlags;
-        public List<string> Options = new List<string>();
+        public string[] Options;
 
         public bool HasCapacity;
         public bool AllowExceedCapacity;
@@ -18,9 +17,9 @@ namespace LegendaryTools.Systems
 
         public float[] StackPenaults;
 
-        public bool HasOptions => Options.Count > 0;
+        public bool HasOptions => Options != null && Options.Length > 0;
 
-        public int FlagOptionEverythingValue => (int) Mathf.Pow(2, Options.Count) - 1;
+        public int FlagOptionEverythingValue => Options != null ? (int) Mathf.Pow(2, Options.Length) - 1 : 0;
 
         public bool HasStackPenault => StackPenaults != null && StackPenaults.Length > 0;
     }
