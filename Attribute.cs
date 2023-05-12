@@ -70,6 +70,10 @@ namespace LegendaryTools.Systems
         
         //Returns the current value of the attribute taking into account all modifiers currently applied
         public float Value => GetValueWithModifiers();
+        public bool ValueAsBool => Convert.ToBoolean(Value);
+        public short ValueAsShort => Convert.ToInt16(Value);
+        public int ValueAsInt => Convert.ToInt32(Value);
+        public long ValueAsLong => Convert.ToInt64(Value);
         
         public string ValueAsOption
         {
@@ -89,6 +93,7 @@ namespace LegendaryTools.Systems
 
         public bool HasOptions => Config?.HasOptions ?? false;
         public bool OptionsAreFlags => Config?.OptionsAreFlags ?? false;
+        public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
         
     #if ODIN_INSPECTOR
         public IEnumerable EditorOptions
@@ -120,6 +125,7 @@ namespace LegendaryTools.Systems
     #endif
 
         public bool HasCapacity => Config?.HasCapacity ?? false;
+        public bool HasParent => Parent != null;
 
         public event Action<Attribute> OnAttributeModAdd;
         public event Action<Attribute> OnAttributeModRemove;
@@ -234,84 +240,84 @@ namespace LegendaryTools.Systems
         }
 
         /// Checks whether the mod can be applied to the target entity
-        public bool ModApplicationCanBeAccepted(Attribute attribute, AttributeCondition modifier = null)
+        public bool ModApplicationCanBeAccepted(Attribute attributeModifier, AttributeCondition attributeCondition = null)
         {
-            if (modifier == null)
+            // if (modifier == null)
+            // {
+            //     modifier = attribute.TargetAttributeModifier.Find(item => item.TargetAttributeID.Equals(Config));
+            // }
+
+            if (attributeCondition == null)
             {
-                modifier = attribute.TargetAttributeModifier.Find(item => item.TargetAttributeID.Equals(Config));
+                return false;
             }
 
-            if (modifier != null)
+            foreach (AttributeModifierCondition attrModCond in attributeCondition.ModApplicationConditions)
             {
-                Attribute currentAttribute = null;
-                for (int i = 0; i < modifier.ModApplicationConditions.Count; i++)
+                Attribute currentAttribute = Parent.GetAttributeByID(attrModCond.AttributeName);
+                switch (attrModCond.Operator)
                 {
-                    currentAttribute = Parent.GetAttributeByID(modifier.ModApplicationConditions[i].AttributeName);
-                    switch (modifier.ModApplicationConditions[i].Operator)
-                    {
-                        case AttributeModOperator.Equals:
-                            if (!(currentAttribute.Value == modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                    case AttributeModOperator.Equals:
+                        if (!(currentAttribute.Value == attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.Greater:
-                            if (!(currentAttribute.Value > modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.Greater:
+                        if (!(currentAttribute.Value > attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.Less:
-                            if (!(currentAttribute.Value < modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.Less:
+                        if (!(currentAttribute.Value < attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.GreaterOrEquals:
-                            if (!(currentAttribute.Value >= modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.GreaterOrEquals:
+                        if (!(currentAttribute.Value >= attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.LessOrEquals:
-                            if (!(currentAttribute.Value <= modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.LessOrEquals:
+                        if (!(currentAttribute.Value <= attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.NotEquals:
-                            if (!(currentAttribute.Value != modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.NotEquals:
+                        if (!(currentAttribute.Value != attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.ContainsFlag:
-                            if (!FlagUtil.Has(currentAttribute.Value, modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.ContainsFlag:
+                        if (!FlagUtil.Has(currentAttribute.Value, attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                        case AttributeModOperator.NotContainsFlag:
-                            if (FlagUtil.Has(currentAttribute.Value, modifier.ModApplicationConditions[i].Value))
-                            {
-                                return false;
-                            }
+                        break;
+                    case AttributeModOperator.NotContainsFlag:
+                        if (FlagUtil.Has(currentAttribute.Value, attrModCond.Value))
+                        {
+                            return false;
+                        }
 
-                            break;
-                    }
+                        break;
                 }
-
-                return true;
             }
 
-            return false;
+            return true;
+
         }
 
         public Attribute Clone(IAttributeSystem parent)
@@ -341,25 +347,27 @@ namespace LegendaryTools.Systems
                 return 0;
             }
 
-            if (HasOptions && Config.OptionsAreFlags)
+            if (HasOptions)
             {
                 float currentFlag = Flat;
-                if(Modifiers != null)
+                if (Modifiers == null)
                 {
-                    for (int i = 0; i < Modifiers.Count; i++)
+                    return currentFlag;
+                }
+
+                foreach (Attribute t in Modifiers)
+                {
+                    switch (t.FlagOperator)
                     {
-                        switch (Modifiers[i].FlagOperator)
-                        {
-                            case AttributeFlagModOperator.AddFlag:
-                                currentFlag = FlagUtil.Add(currentFlag, Modifiers[i].Flat);
-                                break;
-                            case AttributeFlagModOperator.RemoveFlag:
-                                currentFlag = FlagUtil.Remove(currentFlag, Modifiers[i].Flat);
-                                break;
-                            case AttributeFlagModOperator.Set:
-                                currentFlag = Modifiers[i].Flat;
-                                break;
-                        }
+                        case AttributeFlagModOperator.AddFlag when Config.OptionsAreFlags:
+                            currentFlag = FlagUtil.Add(currentFlag, t.Flat);
+                            break;
+                        case AttributeFlagModOperator.RemoveFlag when Config.OptionsAreFlags:
+                            currentFlag = FlagUtil.Remove(currentFlag, t.Flat);
+                            break;
+                        case AttributeFlagModOperator.Set:
+                            currentFlag = t.Flat;
+                            break;
                     }
                 }
 

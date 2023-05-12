@@ -21,28 +21,24 @@ namespace LegendaryTools.Systems
         {
             List<Attribute> allModifiers =
                 attributeSystem.Attributes.FindAll(item => item.Type == AttributeType.Modifier);
-    
-            Attribute currentAttribute = null;
-            for (int i = 0; i < allModifiers.Count; i++)
+
+            foreach (Attribute attrMod in allModifiers)
             {
-                for (int j = 0; j < allModifiers[i].TargetAttributeModifier.Count; j++)
+                foreach (AttributeCondition targetAttrMod in attrMod.TargetAttributeModifier)
                 {
-                    currentAttribute = GetAttributeByID(allModifiers[i].TargetAttributeModifier[j].TargetAttributeID);
-                    if (currentAttribute != null)
-                    {
-                        currentAttribute.AddModifier(allModifiers[i], allModifiers[i].TargetAttributeModifier[j]);
-                    }
+                    Attribute currentAttribute = GetAttributeByID(targetAttrMod.TargetAttributeID);
+                    currentAttribute?.AddModifier(attrMod, targetAttrMod);
                 }
             }
         }
     
         public void RemoveModifiers(AttributeSystem attributeSystem)
         {
-            for (int i = 0; i < Attributes.Count; i++)
+            foreach (Attribute attr in Attributes)
             {
-                if (Attributes[i].Modifiers.Count > 0)
+                if (attr.Modifiers.Count > 0)
                 {
-                    Attributes[i].RemoveModifiers(attributeSystem);
+                    attr.RemoveModifiers(attributeSystem);
                 }
             }
         }

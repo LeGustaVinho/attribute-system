@@ -24,22 +24,32 @@ namespace LegendaryTools.Systems.OdinInspector
                 member.Name == nameof(Attribute.ValueAsOption) ||
                 member.Name == nameof(Attribute.FlatAsOptionIndex) ||
                 member.Name == nameof(Attribute.FlatAsOptionFlag) ||
-                member.Name == nameof(Attribute.ValueAsOptionFlag)
+                member.Name == nameof(Attribute.ValueAsOptionFlag) ||
+                member.Name == nameof(Attribute.Parent)
                 )
             {
                 attributes.Add(new VerticalGroupAttribute("Value"));
+                attributes.Add(new LabelWidthAttribute(37));
+            }
+            
+            if (member.Name == nameof(Attribute.Flat) ||
+                member.Name == nameof(Attribute.Factor))
+            {
+                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor", width: 100));
             }
 
             if (member.Name == nameof(Attribute.FlatAsOptionIndex))
             {
                 attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new HideLabelAttribute());
                 attributes.Add(new ValueDropdownAttribute(nameof(Attribute.EditorOptions)));
-                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasOptions)));
-                attributes.Add(new HideIfAttribute(nameof(Attribute.OptionsAreFlags)));
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasOptionsAndIsNotFlags)));
+                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor"));
             }
             
             if (member.Name == nameof(Attribute.FlatAsOptionFlag))
             {
+                attributes.Add(new HideLabelAttribute());
                 attributes.Add(new ShowInInspectorAttribute());
                 attributes.Add(new CustomValueDrawerAttribute("DrawFlatAsOptionFlag"));
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.OptionsAreFlags)));
@@ -48,25 +58,35 @@ namespace LegendaryTools.Systems.OdinInspector
             if (member.Name == nameof(Attribute.Value))
             {
                 attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new HorizontalGroupAttribute("Value/ModValue"));
             }
             
             if (member.Name == nameof(Attribute.ValueAsOption))
             {
                 attributes.Add(new ShowInInspectorAttribute());
-                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasOptions)));
-                attributes.Add(new HideIfAttribute(nameof(Attribute.OptionsAreFlags)));
+                attributes.Add(new HideLabelAttribute());
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasOptionsAndIsNotFlags)));
+                attributes.Add(new HorizontalGroupAttribute("Value/ModValue"));
             }
             
             if (member.Name == nameof(Attribute.ValueAsOptionFlag))
             {
                 attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new HideLabelAttribute());
                 attributes.Add(new CustomValueDrawerAttribute("DrawFlatAsOptionFlag"));
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.OptionsAreFlags)));
+                attributes.Add(new HorizontalGroupAttribute("Value/ModValue"));
             }
             
             if (member.Name == nameof(Attribute.Capacity))
             {
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.HasCapacity)));
+            }
+            
+            if (member.Name == nameof(Attribute.Parent))
+            {
+                attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasParent)));
             }
             
             if (member.Name == nameof(Attribute.TargetAttributeModifier) ||
@@ -84,6 +104,13 @@ namespace LegendaryTools.Systems.OdinInspector
             if (member.Name == nameof(Attribute.TargetAttributeModifier))
             {
                 attributes.Add(new TableListAttribute());
+            }
+
+            if (member.Name == nameof(Attribute.Modifiers))
+            {
+                attributes.Add(new VerticalGroupAttribute("Mods"));
+                attributes.Add(new TableListAttribute());
+                attributes.Add(new ShowInInspectorAttribute());
             }
         }
     }
