@@ -13,6 +13,7 @@ namespace LegendaryTools.Systems
         public bool AllowExceedCapacity;
         public float MinCapacity;
 
+        public bool HasMinMax;
         public Vector2 MinMaxValue;
 
         public float[] StackPenaults;

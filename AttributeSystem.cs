@@ -6,9 +6,10 @@ namespace LegendaryTools.Systems
 {
     public interface IAttributeSystem
     {
-        void AddModifiers(AttributeSystem attributeSystem);
-        void RemoveModifiers(AttributeSystem attributeSystem);
-        Attribute GetAttributeByID(AttributeConfig attributeName);
+        List<Attribute> AllAttributes { get; }
+        void AddModifiers(IAttributeSystem attributeSystem);
+        void RemoveModifiers(IAttributeSystem attributeSystem);
+        Attribute GetAttributeByID(AttributeConfig attributeConfig);
     }
 
     [Serializable]
@@ -16,23 +17,22 @@ namespace LegendaryTools.Systems
     {
         public List<Attribute> Attributes = new List<Attribute>();
         private readonly Dictionary<AttributeConfig, Attribute> attributesLookup = new Dictionary<AttributeConfig, Attribute>();
-    
-        public void AddModifiers(AttributeSystem attributeSystem)
+
+        public List<Attribute> AllAttributes => Attributes;
+        
+        public void AddModifiers(IAttributeSystem attributeSystem)
         {
             List<Attribute> allModifiers =
-                attributeSystem.Attributes.FindAll(item => item.Type == AttributeType.Modifier);
+                attributeSystem.AllAttributes.FindAll(item => item.Type == AttributeType.Modifier);
 
-            foreach (Attribute attrMod in allModifiers)
+            foreach (Attribute modifier in allModifiers)
             {
-                foreach (AttributeCondition targetAttrMod in attrMod.TargetAttributeModifier)
-                {
-                    Attribute currentAttribute = GetAttributeByID(targetAttrMod.TargetAttributeID);
-                    currentAttribute?.AddModifier(attrMod, targetAttrMod);
-                }
+                Attribute targetAttribute = GetAttributeByID(modifier.Config);
+                targetAttribute?.AddModifier(modifier);
             }
         }
     
-        public void RemoveModifiers(AttributeSystem attributeSystem)
+        public void RemoveModifiers(IAttributeSystem attributeSystem)
         {
             foreach (Attribute attr in Attributes)
             {
@@ -43,21 +43,21 @@ namespace LegendaryTools.Systems
             }
         }
     
-        public Attribute GetAttributeByID(AttributeConfig attributeName)
+        public Attribute GetAttributeByID(AttributeConfig attributeConfig)
         {
-            if (attributesLookup.ContainsKey(attributeName))
+            if (attributesLookup.ContainsKey(attributeConfig))
             {
-                return attributesLookup[attributeName];
+                return attributesLookup[attributeConfig];
             }
 
-            Attribute attr = Attributes.Find(item => item.Config == attributeName);
+            Attribute attr = Attributes.Find(item => item.Config == attributeConfig);
             if (attr != null)
             {
-                attributesLookup.Add(attributeName, attr);
+                attributesLookup.Add(attributeConfig, attr);
                 return attr;
             }
 
-            Debug.LogError("[AttributeSystem:GetAttributeByID(" + attributeName + ") -> Not found");
+            Debug.LogError($"[AttributeSystem:GetAttributeByID({attributeConfig.name}) -> Not found");
             return null;
         }
 

@@ -47,12 +47,12 @@ namespace LegendaryTools.Systems
         public float Capacity;
         
         //List the conditions that this modifier needs to find to be applied
-        public List<AttributeCondition> TargetAttributeModifier = new List<AttributeCondition>();
+        public List<AttributeCondition> ModifierConditions = new List<AttributeCondition>();
         
         public AttributeFlagModOperator FlagOperator = AttributeFlagModOperator.AddFlag;
 
         //Lists all modifiers that are currently changing this attribute
-        public readonly List<Attribute> Modifiers = new List<Attribute>();
+        public List<Attribute> Modifiers = new List<Attribute>();
         
         public IAttributeSystem Parent { get; protected set; }
 
@@ -94,6 +94,7 @@ namespace LegendaryTools.Systems
         public bool HasOptions => Config?.HasOptions ?? false;
         public bool OptionsAreFlags => Config?.OptionsAreFlags ?? false;
         public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
+        public bool OptionsAreFlagsAndIsModifier => OptionsAreFlags && Type == AttributeType.Modifier; 
         
     #if ODIN_INSPECTOR
         public IEnumerable EditorOptions
@@ -167,32 +168,35 @@ namespace LegendaryTools.Systems
             Config = config;
         }
 
-        public void AddModifier(Attribute attribute, AttributeCondition modifier = null)
+        public bool AddModifier(Attribute modifier)
         {
-            if (!ModApplicationCanBeAccepted(attribute, modifier))
+            if (!ModApplicationCanBeAccepted(modifier))
             {
-                return;
+                return false;
             }
 
-            Modifiers.Add(attribute);
-
-            OnAttributeModAdd?.Invoke(attribute);
+            Modifiers ??= new List<Attribute>();
+            Modifiers.Add(modifier);
+            OnAttributeModAdd?.Invoke(modifier);
+            return true;
         }
 
-        public void RemoveModifier(Attribute attribute)
+        public bool RemoveModifier(Attribute attribute)
         {
+            Modifiers ??= new List<Attribute>();
             if (!Modifiers.Contains(attribute))
             {
-                return;
+                return false;
             }
 
-            Modifiers.Remove(attribute);
-
-            OnAttributeModRemove?.Invoke(attribute);
+            bool removed = Modifiers.Remove(attribute);
+            if(removed) OnAttributeModRemove?.Invoke(attribute);
+            return removed;
         }
 
-        public void RemoveModifiers(AttributeSystem attributeSystem)
+        public void RemoveModifiers(IAttributeSystem attributeSystem)
         {
+            Modifiers ??= new List<Attribute>();
             List<Attribute> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
 
             Modifiers.RemoveAll(item => item.Parent == attributeSystem);
@@ -240,84 +244,22 @@ namespace LegendaryTools.Systems
         }
 
         /// Checks whether the mod can be applied to the target entity
-        public bool ModApplicationCanBeAccepted(Attribute attributeModifier, AttributeCondition attributeCondition = null)
+        public bool ModApplicationCanBeAccepted(Attribute attributeModifier)
         {
-            // if (modifier == null)
-            // {
-            //     modifier = attribute.TargetAttributeModifier.Find(item => item.TargetAttributeID.Equals(Config));
-            // }
-
-            if (attributeCondition == null)
+            if (attributeModifier == null)
             {
                 return false;
             }
 
-            foreach (AttributeModifierCondition attrModCond in attributeCondition.ModApplicationConditions)
+            foreach (AttributeCondition modifierCondition in attributeModifier.ModifierConditions)
             {
-                Attribute currentAttribute = Parent.GetAttributeByID(attrModCond.AttributeName);
-                switch (attrModCond.Operator)
+                if (!modifierCondition.CanBeAppliedOn(Parent))
                 {
-                    case AttributeModOperator.Equals:
-                        if (!(currentAttribute.Value == attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.Greater:
-                        if (!(currentAttribute.Value > attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.Less:
-                        if (!(currentAttribute.Value < attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.GreaterOrEquals:
-                        if (!(currentAttribute.Value >= attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.LessOrEquals:
-                        if (!(currentAttribute.Value <= attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.NotEquals:
-                        if (!(currentAttribute.Value != attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.ContainsFlag:
-                        if (!FlagUtil.Has(currentAttribute.Value, attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
-                    case AttributeModOperator.NotContainsFlag:
-                        if (FlagUtil.Has(currentAttribute.Value, attrModCond.Value))
-                        {
-                            return false;
-                        }
-
-                        break;
+                    return false;
                 }
             }
 
             return true;
-
         }
 
         public Attribute Clone(IAttributeSystem parent)
@@ -331,9 +273,9 @@ namespace LegendaryTools.Systems
                 Type = Type,
             };
 
-            foreach (AttributeCondition targetAttributeModifier in TargetAttributeModifier)
+            foreach (AttributeCondition targetAttributeModifier in ModifierConditions)
             {
-                clone.TargetAttributeModifier.Add(targetAttributeModifier.Clone());
+                clone.ModifierConditions.Add(targetAttributeModifier.Clone());
             }
 
             return clone;
@@ -347,59 +289,74 @@ namespace LegendaryTools.Systems
                 return 0;
             }
 
+            List<Attribute> allRecursiveModifiers = new List<Attribute>();
+            GetModifiersRecursive(allRecursiveModifiers);
+
             if (HasOptions)
             {
                 float currentFlag = Flat;
-                if (Modifiers == null)
-                {
-                    return currentFlag;
-                }
 
-                foreach (Attribute t in Modifiers)
+                foreach (Attribute modifier in allRecursiveModifiers)
                 {
-                    switch (t.FlagOperator)
+                    if (modifier.OptionsAreFlags)
                     {
-                        case AttributeFlagModOperator.AddFlag when Config.OptionsAreFlags:
-                            currentFlag = FlagUtil.Add(currentFlag, t.Flat);
-                            break;
-                        case AttributeFlagModOperator.RemoveFlag when Config.OptionsAreFlags:
-                            currentFlag = FlagUtil.Remove(currentFlag, t.Flat);
-                            break;
-                        case AttributeFlagModOperator.Set:
-                            currentFlag = t.Flat;
-                            break;
+                        switch (modifier.FlagOperator)
+                        {
+                            case AttributeFlagModOperator.AddFlag when Config.OptionsAreFlags:
+                                currentFlag = FlagUtil.Add(currentFlag, modifier.Flat);
+                                break;
+                            case AttributeFlagModOperator.RemoveFlag when Config.OptionsAreFlags:
+                                currentFlag = FlagUtil.Remove(currentFlag, modifier.Flat);
+                                break;
+                            case AttributeFlagModOperator.Set:
+                                currentFlag = modifier.Flat;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        currentFlag = modifier.Flat;
                     }
                 }
 
                 return currentFlag;
             }
-            
-            if (Modifiers == null)
-            {
-                return Mathf.Clamp(Flat * (1 + Factor), Config.MinMaxValue.x, Config.MinMaxValue.y);
-            }
 
-            Modifiers.Sort((a, b) => -1 * a.Factor.CompareTo(b.Factor)); //descending sort
+            allRecursiveModifiers.Sort((a, b) => -1 * a.Factor.CompareTo(b.Factor)); //descending sort
             float totalFlat = 0;
             float totalFactor = 0;
-            for (int i = 0; i < Modifiers.Count; i++)
+            for (int i = 0; i < allRecursiveModifiers.Count; i++)
             {
-                totalFlat += Modifiers[i].Flat;
+                totalFlat += allRecursiveModifiers[i].Flat;
 
                 if (Config.HasStackPenault)
                 {
-                    totalFactor += Modifiers[i].Factor *
+                    totalFactor += allRecursiveModifiers[i].Factor *
                                    Config.StackPenaults[
                                        Mathf.Clamp(i, 0, Config.StackPenaults.Length - 1)];
                 }
                 else
                 {
-                    totalFactor += Modifiers[i].Factor;
+                    totalFactor += allRecursiveModifiers[i].Factor;
                 }
             }
 
-            return Mathf.Clamp((Flat + totalFlat) * (1 + Factor + totalFactor),
-                Config.MinMaxValue.x, Config.MinMaxValue.y);
+            float finalValue = (Flat + totalFlat) * (1 + Factor + totalFactor);
+            return Config.HasMinMax ? Mathf.Clamp(finalValue,
+                Config.MinMaxValue.x, Config.MinMaxValue.y) : finalValue;
+        }
+
+        private void GetModifiersRecursive(List<Attribute> allModifiers)
+        {
+            if (Modifiers.Count > 0)
+            {
+                allModifiers.AddRange(Modifiers);
+
+                foreach (Attribute modifier in Modifiers)
+                {
+                    modifier.GetModifiersRecursive(allModifiers);
+                }
+            }
         }
     }
 }

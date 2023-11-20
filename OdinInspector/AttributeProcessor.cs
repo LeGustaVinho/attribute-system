@@ -1,9 +1,8 @@
-#if ODIN_INSPECTOR
+#if UNITY_EDITOR && ODIN_INSPECTOR
 using System.Collections.Generic;
 using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
-using UnityEditor;
 
 namespace LegendaryTools.Systems.OdinInspector
 {
@@ -89,8 +88,7 @@ namespace LegendaryTools.Systems.OdinInspector
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.HasParent)));
             }
             
-            if (member.Name == nameof(Attribute.TargetAttributeModifier) ||
-                member.Name == nameof(Attribute.FlagOperator))
+            if (member.Name == nameof(Attribute.ModifierConditions))
             {
                 attributes.Add(new VerticalGroupAttribute("Mods"));
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.Type), AttributeType.Modifier));
@@ -98,10 +96,11 @@ namespace LegendaryTools.Systems.OdinInspector
 
             if (member.Name == nameof(Attribute.FlagOperator))
             {
-                attributes.Add(new ShowIfAttribute(nameof(Attribute.OptionsAreFlags)));
+                attributes.Add(new VerticalGroupAttribute("Mods"));
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.OptionsAreFlagsAndIsModifier)));
             }
             
-            if (member.Name == nameof(Attribute.TargetAttributeModifier))
+            if (member.Name == nameof(Attribute.ModifierConditions))
             {
                 attributes.Add(new TableListAttribute());
             }
@@ -111,6 +110,7 @@ namespace LegendaryTools.Systems.OdinInspector
                 attributes.Add(new VerticalGroupAttribute("Mods"));
                 attributes.Add(new TableListAttribute());
                 attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.HasParent)));
             }
         }
     }
