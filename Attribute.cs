@@ -44,7 +44,15 @@ namespace LegendaryTools.Systems
         
         public float Flat;
         public float Factor = 0;
-        public float Capacity { get; private set; }
+
+        public float Capacity
+        {
+            get => capacity;
+            private set => capacity = value;
+        }
+        
+        [SerializeField]
+        private float capacity;
 
         //List the conditions that this modifier needs to find to be applied
         public List<AttributeCondition> ModifierConditions = new List<AttributeCondition>();
