@@ -51,7 +51,7 @@ namespace LegendaryTools.Systems
             private set => capacity = value;
         }
         
-        [SerializeField]
+        [SerializeField][HideInInspector]
         private float capacity;
 
         //List the conditions that this modifier needs to find to be applied
