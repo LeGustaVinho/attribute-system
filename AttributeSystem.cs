@@ -10,6 +10,7 @@ namespace LegendaryTools.Systems
         void AddModifiers(IAttributeSystem attributeSystem);
         void RemoveModifiers(IAttributeSystem attributeSystem);
         Attribute GetAttributeByID(AttributeConfig attributeConfig);
+        AttributeSystem Clone(IAttributeSystem newParent);
     }
 
     [Serializable]
@@ -19,7 +20,7 @@ namespace LegendaryTools.Systems
         private readonly Dictionary<AttributeConfig, Attribute> attributesLookup = new Dictionary<AttributeConfig, Attribute>();
 
         public List<Attribute> AllAttributes => Attributes;
-        
+
         public void AddModifiers(IAttributeSystem attributeSystem)
         {
             List<Attribute> allModifiers =

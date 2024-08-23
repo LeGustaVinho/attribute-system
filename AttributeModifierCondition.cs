@@ -31,7 +31,7 @@ namespace LegendaryTools.Systems
         public bool OptionsAreFlags => Attribute?.OptionsAreFlags ?? false;
         public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
         
-#if ODIN_INSPECTOR
+#if ODIN_INSPECTOR && UNITY_EDITOR
         public IEnumerable EditorOptions
         {
             get

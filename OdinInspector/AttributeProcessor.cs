@@ -80,6 +80,7 @@ namespace LegendaryTools.Systems.OdinInspector
             if (member.Name == nameof(Attribute.Capacity))
             {
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.HasCapacity)));
+                attributes.Add(new ShowInInspectorAttribute());
             }
             
             if (member.Name == nameof(Attribute.Parent))

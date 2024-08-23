@@ -1,7 +1,7 @@
 {
   "name": "com.legustavinho.legendary-tools-attribute-system",
   "displayName": "Legendary Tools - Attribute System",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "unity": "2019.4",
   "type": "library",
   "keywords": [],

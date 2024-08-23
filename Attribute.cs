@@ -44,8 +44,8 @@ namespace LegendaryTools.Systems
         
         public float Flat;
         public float Factor = 0;
-        public float Capacity;
-        
+        public float Capacity { get; private set; }
+
         //List the conditions that this modifier needs to find to be applied
         public List<AttributeCondition> ModifierConditions = new List<AttributeCondition>();
         
@@ -96,7 +96,7 @@ namespace LegendaryTools.Systems
         public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
         public bool OptionsAreFlagsAndIsModifier => OptionsAreFlags && Type == AttributeType.Modifier; 
         
-    #if ODIN_INSPECTOR
+    #if UNITY_EDITOR && ODIN_INSPECTOR
         public IEnumerable EditorOptions
         {
             get
