@@ -1,10 +1,15 @@
-﻿using Sirenix.OdinInspector;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
     [CreateAssetMenu(fileName = "EntityConfig", menuName = "Tools/AttributeSystem/EntityConfig")]
-    public class EntityConfig : SerializedScriptableObject
+    public class EntityConfig : 
+#if ODIN_INSPECTOR
+        Sirenix.OdinInspector.SerializedScriptableObject
+#else
+        ScriptableObject
+#endif
+        
     {
         public bool IsClone { get; private set; }
         public AttributeSystem AttributeSystem;
