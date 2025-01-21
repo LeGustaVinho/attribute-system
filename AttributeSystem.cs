@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using LegendaryTools.TagSystem;
 using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
-    public interface IAttributeSystem
+    public interface IAttributeSystem : ITaggable
     {
+        public TagFilterMatch[] OnlyAcceptTags { get; }
+        
         List<Attribute> AllAttributes { get; }
         void AddModifiers(IAttributeSystem attributeSystem);
         void RemoveModifiers(IAttributeSystem attributeSystem);
@@ -16,8 +20,22 @@ namespace LegendaryTools.Systems
     [Serializable]
     public class AttributeSystem : IAttributeSystem
     {
+        public Tag[] Tags
+        {
+            get => tags;
+            set => tags = value;
+        }
+        public TagFilterMatch[] OnlyAcceptTags
+        {
+            get => onlyAcceptTags;
+            set => onlyAcceptTags = value;
+        }
+        
         public List<Attribute> Attributes = new List<Attribute>();
         private readonly Dictionary<AttributeConfig, Attribute> attributesLookup = new Dictionary<AttributeConfig, Attribute>();
+        
+        [SerializeField] private Tag[] tags;
+        [SerializeField] private TagFilterMatch[] onlyAcceptTags;
 
         public List<Attribute> AllAttributes => Attributes;
 
@@ -71,6 +89,12 @@ namespace LegendaryTools.Systems
             }
             
             return clone;
+        }
+        
+        public bool ContainsTag(Tag tag)
+        {
+            if (tag == null) return false;
+            return tags.Contains(tag);
         }
     }
 }

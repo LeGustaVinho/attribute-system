@@ -18,7 +18,7 @@ namespace LegendaryTools.Systems.OdinInspector
             if (member.Name == nameof(Attribute.Type) ||
                 member.Name == nameof(Attribute.Flat) ||
                 member.Name == nameof(Attribute.Factor) ||
-                member.Name == nameof(Attribute.Capacity) ||
+                member.Name == nameof(Attribute.CurrentValue) ||
                 member.Name == nameof(Attribute.Value) ||
                 member.Name == nameof(Attribute.ValueAsOption) ||
                 member.Name == nameof(Attribute.FlatAsOptionIndex) ||
@@ -77,7 +77,7 @@ namespace LegendaryTools.Systems.OdinInspector
                 attributes.Add(new HorizontalGroupAttribute("Value/ModValue"));
             }
             
-            if (member.Name == nameof(Attribute.Capacity))
+            if (member.Name == nameof(Attribute.CurrentValue))
             {
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.HasCapacity)));
                 attributes.Add(new ShowInInspectorAttribute());

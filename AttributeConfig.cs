@@ -17,6 +17,11 @@ namespace LegendaryTools.Systems
         public Vector2 MinMaxValue;
 
         public float[] StackPenaults;
+        
+        /// <summary>
+        /// Configures how modifiers propagate when this attribute is used as a modifier.
+        /// </summary>
+        public ModifierPropagation Propagation = ModifierPropagation.Parent;
 
         public bool HasOptions => Options != null && Options.Length > 0;
 
