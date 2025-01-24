@@ -6,7 +6,7 @@ using Sirenix.OdinInspector.Editor;
 
 namespace LegendaryTools.Systems.OdinInspector
 {
-    public class EntityConfigProcessor : OdinAttributeProcessor<EntityConfigProcessor>
+    public class EntityConfigProcessor : OdinAttributeProcessor<EntityConfig>
     {
         public override void ProcessChildMemberAttributes(InspectorProperty parentProperty, MemberInfo member, List<System.Attribute> attributes)
         {
@@ -16,10 +16,10 @@ namespace LegendaryTools.Systems.OdinInspector
                 attributes.Add(new ReadOnlyAttribute());
             }
             
-            if (member.Name == nameof(EntityConfig.AttributeSystem))
+            if (member.Name == nameof(EntityConfig.Data))
             {
-                attributes.Add(new TableListAttribute());
-                attributes.Add(new ShowInInspectorAttribute());
+                attributes.Add(new InlinePropertyAttribute());
+                attributes.Add(new HideLabelAttribute());
             }
         }
     }

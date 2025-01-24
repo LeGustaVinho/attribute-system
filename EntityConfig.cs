@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using LegendaryTools.TagSystem;
+using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
@@ -9,22 +12,23 @@ namespace LegendaryTools.Systems
 #else
         ScriptableObject
 #endif
-        
     {
-        public bool IsClone { get; private set; }
-        public AttributeSystem AttributeSystem;
-
         private const string CLONE = "(Clone)";
-        
-        public virtual T Clone<T>(IAttributeSystem parent)
-            where T : EntityConfig
+
+        public bool IsClone { get; private set; }
+
+        public EntityData Data;
+
+        /// <summary>
+        /// Faz uma cópia/clonagem do próprio EntityConfig, inclusive clonando seus atributos.
+        /// </summary>
+        public virtual T Clone<T>(IEntity parent) where T : EntityConfig
         {
             T clone = CreateInstance<T>();
-            
             clone.name = name + CLONE;
             clone.IsClone = true;
-            clone.AttributeSystem = AttributeSystem.Clone(parent);
-            
+            clone.Data = Data.Clone(parent);
+
             return clone;
         }
     }

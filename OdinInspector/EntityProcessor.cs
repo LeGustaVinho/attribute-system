@@ -6,7 +6,7 @@ using Sirenix.OdinInspector.Editor;
 
 namespace LegendaryTools.Systems.OdinInspector
 {
-    public class EntityProcessor : OdinAttributeProcessor<EntityProcessor>
+    public class EntityProcessor : OdinAttributeProcessor<Entity>
     {
         public override void ProcessChildMemberAttributes(InspectorProperty parentProperty, MemberInfo member, List<System.Attribute> attributes)
         {

@@ -45,6 +45,10 @@ namespace LegendaryTools.Systems
 
         public float Flat;
         public float Factor;
+        
+        // Permite forçar a aplicação do Modifier
+        // mesmo que a Entity não possua um Attribute com o mesmo Config.
+        public bool ForceApplyIfMissing = false;
 
         public float CurrentValue
         {
@@ -62,7 +66,7 @@ namespace LegendaryTools.Systems
         //Lists all modifiers that are currently changing this attribute
         public List<Attribute> Modifiers = new List<Attribute>();
 
-        public IAttributeSystem Parent { get; protected set; }
+        public IEntity Parent { get; protected set; }
 
         public int FlatAsOptionIndex
         {
@@ -176,7 +180,7 @@ namespace LegendaryTools.Systems
             return 0;
         }
 #endif
-        public Attribute(IAttributeSystem parent, AttributeConfig config)
+        public Attribute(IEntity parent, AttributeConfig config)
         {
             Parent = parent;
             Config = config;
@@ -208,12 +212,12 @@ namespace LegendaryTools.Systems
             return removed;
         }
 
-        public void RemoveModifiers(IAttributeSystem attributeSystem)
+        public void RemoveModifiers(IEntity entity)
         {
             Modifiers ??= new List<Attribute>();
-            List<Attribute> modsToRemove = Modifiers.FindAll(item => item.Parent == attributeSystem);
+            List<Attribute> modsToRemove = Modifiers.FindAll(item => item.Parent == entity);
 
-            Modifiers.RemoveAll(item => item.Parent == attributeSystem);
+            Modifiers.RemoveAll(item => item.Parent == entity);
 
             foreach (Attribute attr in modsToRemove)
             {
@@ -303,7 +307,7 @@ namespace LegendaryTools.Systems
             return true;
         }
 
-        public Attribute Clone(IAttributeSystem parent)
+        public Attribute Clone(IEntity parent)
         {
             Attribute clone = new Attribute(parent ?? Parent, Config)
             {
@@ -311,7 +315,8 @@ namespace LegendaryTools.Systems
                 Factor = Factor,
                 Flat = Flat,
                 FlagOperator = FlagOperator,
-                Type = Type
+                Type = Type,
+                ForceApplyIfMissing = ForceApplyIfMissing
             };
 
             foreach (AttributeCondition targetAttributeModifier in ModifierConditions)

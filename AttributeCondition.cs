@@ -18,12 +18,12 @@ namespace LegendaryTools.Systems
         public List<AttributeModifierCondition> ModApplicationConditions = new List<AttributeModifierCondition>();
 
         /// Checks if the system attribute has all the requirements
-        public bool CanBeAppliedOn(IAttributeSystem targetAttributeSystem)
+        public bool CanBeAppliedOn(IEntity targetEntity)
         {
             if (ModApplicationConditions.Count == 0) return true;
             foreach (AttributeModifierCondition attrModCond in ModApplicationConditions)
             {
-                Attribute currentAttribute = targetAttributeSystem.GetAttributeByID(attrModCond.Attribute);
+                Attribute currentAttribute = targetEntity.GetAttributeByID(attrModCond.Attribute);
                 switch (attrModCond.Operator)
                 {
                     case AttributeModOperator.Equals:
