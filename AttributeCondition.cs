@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace LegendaryTools.Systems
 {
@@ -117,7 +118,7 @@ namespace LegendaryTools.Systems
 
                         break;
                     case AttributeModOperator.NotEquals:
-                        if (currentAttribute.Value != attrModCond.Value)
+                        if (Mathf.Approximately(currentAttribute.Value, attrModCond.Value))
                         {
                             if (Operator == AttributeConditionOperator.AllMustBeTrue)
                             {
