@@ -27,8 +27,8 @@ namespace LegendaryTools.Systems
             set => Value = value;
         }
         
-        public bool HasOptions => Attribute?.HasOptions ?? false;
-        public bool OptionsAreFlags => Attribute?.OptionsAreFlags ?? false;
+        public bool HasOptions => Attribute?.Data.HasOptions ?? false;
+        public bool OptionsAreFlags => Attribute?.Data.OptionsAreFlags ?? false;
         public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
         
 #if ODIN_INSPECTOR && UNITY_EDITOR
@@ -38,10 +38,10 @@ namespace LegendaryTools.Systems
             {
                 ValueDropdownList<int> valueDropDownList = new ValueDropdownList<int>();
                 if (Attribute == null) return valueDropDownList;
-                if (Attribute.Options == null) return valueDropDownList;
-                for (int index = 0; index < Attribute.Options.Length; index++)
+                if (Attribute.Data.Options == null) return valueDropDownList;
+                for (int index = 0; index < Attribute.Data.Options.Length; index++)
                 {
-                    valueDropDownList.Add(Attribute.Options[index], index);
+                    valueDropDownList.Add(Attribute.Data.Options[index], index);
                 }
 
                 return valueDropDownList;
@@ -53,20 +53,20 @@ namespace LegendaryTools.Systems
             get
             {
                 if (Attribute == null) return new string[2] {"None", "Everything"};
-                if (Attribute.Options == null) return new string[2] {"None", "Everything"};
+                if (Attribute.Data.Options == null) return new string[2] {"None", "Everything"};
 
-                return Attribute.Options;
+                return Attribute.Data.Options;
             }
         }
         
         private int DrawValueAsOptionFlag(int value, GUIContent label)
         {
-            if (Attribute != null && Attribute.HasOptions && Attribute.OptionsAreFlags)
+            if (Attribute != null && Attribute.Data.HasOptions && Attribute.Data.OptionsAreFlags)
             {
                 int flagResult = label == null
                     ? EditorGUILayout.MaskField(value, EditorOptionsArray)
                     : EditorGUILayout.MaskField(label, value, EditorOptionsArray);
-                return flagResult == -1 ? Attribute.FlagOptionEverythingValue : flagResult;
+                return flagResult == -1 ? Attribute.Data.FlagOptionEverythingValue : flagResult;
             }
 
             return 0;

@@ -23,7 +23,12 @@ namespace LegendaryTools.Systems
             if (ModApplicationConditions.Count == 0) return true;
             foreach (AttributeModifierCondition attrModCond in ModApplicationConditions)
             {
+                // 1) Try to fetch the matching attribute from the target entity.
                 Attribute currentAttribute = targetEntity.GetAttributeByID(attrModCond.Attribute);
+                
+                // 2) If it's missing, treat that as a failure for the condition.
+                if (currentAttribute == null) return false;
+                
                 switch (attrModCond.Operator)
                 {
                     case AttributeModOperator.Equals:

@@ -1,7 +1,8 @@
-﻿using LegendaryTools.GraphV2;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using LegendaryTools.GraphV2;
 using LegendaryTools.TagSystem;
 using UnityEngine;
 
@@ -10,9 +11,27 @@ namespace LegendaryTools.Systems
     [Serializable]
     public class Entity : MultiParentTreeNode, IEntity
     {
+        /// <summary>
+        /// Stores a reference to this entity's configuration. 
+        /// We clone the config if it isn't flagged as a clone to avoid modifying the original asset at runtime.
+        /// </summary>
         protected EntityConfig config;
+
+        /// <summary>
+        /// This dictionary is used to quickly find attributes by their AttributeConfig.
+        /// </summary>
         private readonly Dictionary<AttributeConfig, Attribute> attributesLookup = new Dictionary<AttributeConfig, Attribute>();
 
+        /// <summary>
+        /// A cached read-only view of the attributes list. At runtime, you cannot directly add/remove items 
+        /// from a ReadOnlyCollection, ensuring that AllAttributes is effectively "locked".
+        /// </summary>
+        private ReadOnlyCollection<Attribute> readOnlyAttributes;
+
+        /// <summary>
+        /// The config property. If the assigned config is not a clone, we clone it to avoid runtime side-effects 
+        /// on the original asset.
+        /// </summary>
         public virtual EntityConfig Config
         {
             get
@@ -26,34 +45,60 @@ namespace LegendaryTools.Systems
             set => config = value.IsClone ? value : value.Clone<EntityConfig>(this);
         }
 
+        /// <summary>
+        /// Returns the tags associated with this entity.
+        /// </summary>
         public Tag[] Tags => Config.Data.tags;
-        public TagFilterMatch[] OnlyAcceptTags => Config.Data.onlyAcceptTags;
-        public List<Attribute> AllAttributes => Config.Data.attributes;
 
+        /// <summary>
+        /// Returns the TagFilterMatch[] that dictates which children this entity can accept.
+        /// </summary>
+        public TagFilterMatch[] OnlyAcceptTags => Config.Data.onlyAcceptTags;
+
+        /// <summary>
+        /// A read-only list of all attributes in this entity. You cannot modify this list at runtime directly,
+        /// but it can be changed via the Inspector or via the AddAttribute/RemoveAttribute methods.
+        /// </summary>
+        public IReadOnlyList<Attribute> Attributes => readOnlyAttributes ??= Config.Data.attributes.AsReadOnly();
+
+        /// <summary>
+        /// The EntityManager that "owns" this entity.
+        /// </summary>
         public EntityManager EntityManager { private set; get; }
 
+        /// <summary>
+        /// Initializes this entity with the provided EntityManager.
+        /// </summary>
         public void Initialize(EntityManager entityManager)
         {
             EntityManager = entityManager;
             EntityManager.AddEntity(this);
         }
-        
+
+        /// <summary>
+        /// Initializes this entity with the provided EntityManager and an existing EntityConfig.
+        /// </summary>
         public void Initialize(EntityManager entityManager, EntityConfig entityConfig)
         {
             EntityManager = entityManager;
             EntityManager.AddEntity(this);
             Config = entityConfig;
         }
-        
+
+        /// <summary>
+        /// Initializes this entity with the provided EntityManager and an EntityData. 
+        /// Internally creates an EntityConfig for the data.
+        /// </summary>
         public void Initialize(EntityManager entityManager, EntityData entityData)
         {
             EntityManager = entityManager;
             EntityManager.AddEntity(this);
-            EntityConfig prototype = ScriptableObject.CreateInstance<EntityConfig>();
-            prototype.Data = entityData;
-            Config = prototype;
+            Config = AttributeSystemFactory.CreateEntityConfig(entityData);
         }
 
+        /// <summary>
+        /// Called when this Entity should be removed from the game or system.
+        /// </summary>
         public void Destroy()
         {
             DisconnectFromParents();
@@ -61,23 +106,24 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Attempts to connect this entity as a child of <paramref name="parentEntity"/>.  
-        /// We also apply the modifiers from the "child" (this) to the "parent" and/or the parent's children
-        /// depending on each modifier's <see cref="ModifierPropagation"/> setting.
+        /// Attempts to connect this entity as a child of <paramref name="parentEntity"/>.
+        /// It then applies this child's modifiers based on each modifier's propagation setting.
         /// </summary>
+        /// <returns>A tuple containing (success, connection) 
+        /// where 'success' is true if the connection is allowed by the parent's OnlyAcceptTags.</returns>
         public (bool, INodeConnection) TryToApplyTo(Entity parentEntity)
         {
-            // Checks if this entity matches all the parent's onlyAcceptTags rules
+            // Check if this entity matches the parent's OnlyAcceptTags rules
             foreach (TagFilterMatch tagFilterMatch in parentEntity.OnlyAcceptTags)
             {
                 if (!tagFilterMatch.Match(this))
                     return (false, null);
             }
 
+            // Make the connection to the parent
             INodeConnection connection = ConnectToParent(parentEntity);
-            
-            // Instead of calling parentEntity.AddModifiers(this) blindly,
-            // we now apply this child's modifiers according to Propagation.
+
+            // Apply our child's modifiers to the parent entity and/or the parent's children
             parentEntity.ApplyChildModifiers(this);
 
             return (true, connection);
@@ -111,32 +157,38 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Returns the attribute in this Entity by its config.
+        /// Retrieves an Attribute from this entity by its AttributeConfig, or returns null if not found.
+        /// By default, logs an error if not found; you can disable that via <paramref name="emitErrorIfNotFound"/>.
         /// </summary>
         public Attribute GetAttributeByID(AttributeConfig attributeConfig, bool emitErrorIfNotFound = true)
         {
             if (attributeConfig == null)
             {
-                Debug.LogError("[Entity:GetAttributeByID] attributeConfig is null.");
+                Debug.LogWarning("[Entity:GetAttributeByID] attributeConfig is null.");
                 return null;
             }
 
+            // Attempt to retrieve from the lookup dictionary first
             if (!attributesLookup.TryGetValue(attributeConfig, out Attribute attribute))
             {
-                attribute = AllAttributes.Find(item => item.Config == attributeConfig);
+                // If not found in the dictionary, find it in our attributes
+                attribute = Attributes.FirstOrDefault(item => item.Config == attributeConfig);
                 if (attribute != null)
                 {
                     attributesLookup.Add(attributeConfig, attribute);
                 }
                 else
                 {
-                    if(emitErrorIfNotFound)
-                        Debug.LogError($"[Entity:GetAttributeByID({attributeConfig.name})] -> Not found.");
+                    if (emitErrorIfNotFound)
+                        Debug.LogWarning($"[Entity:GetAttributeByID({attributeConfig.name})] -> Not found.");
                 }
             }
             return attribute;
         }
 
+        /// <summary>
+        /// Checks if this Entity has the specified Tag.
+        /// </summary>
         public bool ContainsTag(Tag tag)
         {
             if (tag == null) return false;
@@ -144,32 +196,35 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Adds all modifier attributes from the given entity to *this* entity's matching attributes
+        /// Adds *all* modifier attributes from the given entity to this entity's matching attributes.
+        /// This is typically used to "transfer" or "apply" all modifier Attributes from one entity to another.
         /// </summary>
         public void AddModifiers(IEntity entitySource)
         {
-            List<Attribute> allModifiers = entitySource.AllAttributes
+            // Collect only the modifier attributes from the source
+            List<Attribute> allModifiers = entitySource.Attributes
                 .Where(item => item.Type == AttributeType.Modifier)
                 .ToList();
 
             foreach (Attribute modifier in allModifiers)
             {
+                // Find or create the target attribute in our entity
                 Attribute targetAttribute = GetAttributeByID(modifier.Config, !modifier.ForceApplyIfMissing);
-
                 if (targetAttribute == null)
                 {
                     if (modifier.ForceApplyIfMissing)
                     {
-                        // Cria o atributo se for para forçar aplicação
+                        // Create a new attribute if forced
                         targetAttribute = new Attribute(this, modifier.Config)
                         {
                             Type = AttributeType.Attribute
                         };
-                        AllAttributes.Add(targetAttribute);
+                        // Instead of AllAttributes.Add(...), call our AddAttribute method
+                        AddAttribute(targetAttribute);
                     }
                     else
                     {
-                        // Caso contrário, não aplica
+                        // Otherwise, skip
                         continue;
                     }
                 }
@@ -179,11 +234,13 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Removes from *this* entity all modifiers that originate from the given entity.
+        /// Removes from this entity all modifiers that originate from the given entity.
+        /// It loops over every Attribute in this Entity and tells each to remove any modifiers 
+        /// that came from the source entity.
         /// </summary>
         public void RemoveModifiers(IEntity entitySource)
         {
-            foreach (Attribute attr in AllAttributes)
+            foreach (Attribute attr in Attributes)
             {
                 if (attr.Modifiers.Count > 0)
                 {
@@ -193,18 +250,19 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Applies the "childEntity" modifiers to this entity and/or this entity's children,
-        /// depending on each modifier's <see cref="ModifierPropagation"/> setting.
+        /// Applies the "childEntity" modifiers to THIS entity and/or this entity's children,
+        /// depending on each modifier's ModifierPropagation setting.
         /// </summary>
-        public void ApplyChildModifiers(IEntity childEntity)
+        private void ApplyChildModifiers(IEntity childEntity)
         {
-            // Collect only the modifier attributes from the child.
-            IEnumerable<Attribute> childModifiers = childEntity.AllAttributes
+            // Collect only the modifier attributes from the child entity
+            IEnumerable<Attribute> childModifiers = childEntity.Attributes
                 .Where(a => a.Type == AttributeType.Modifier);
 
             foreach (Attribute mod in childModifiers)
             {
-                switch (mod.Config.Propagation)
+                // We now check mod.Propagation (since it's stored on the Attribute, not on the config)
+                switch (mod.Propagation)
                 {
                     case ModifierPropagation.Parent:
                         // Only apply to THIS (the parent).
@@ -212,12 +270,12 @@ namespace LegendaryTools.Systems
                         break;
 
                     case ModifierPropagation.Child:
-                        // Only apply to THIS entity's children (not to "this" entity).
+                        // Only apply to THIS entity's children (not "this" entity).
                         AddSingleModifierToChildren(mod, ChildNodes);
                         break;
 
                     case ModifierPropagation.Both:
-                        // Apply to THIS entity and all children.
+                        // Apply to THIS entity and all its children.
                         AddSingleModifierToThisEntity(mod);
                         AddSingleModifierToChildren(mod, ChildNodes);
                         break;
@@ -226,17 +284,17 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Removes modifiers that "childEntity" had previously applied to this entity
-        /// and/or this entity's children, according to each modifier's propagation.
+        /// Removes modifiers that "childEntity" had previously applied to this entity 
+        /// and/or this entity's children, based on the modifiers' propagation.
         /// </summary>
-        public void RemoveChildModifiers(IEntity childEntity)
+        private void RemoveChildModifiers(IEntity childEntity)
         {
-            IEnumerable<Attribute> childModifiers = childEntity.AllAttributes
+            IEnumerable<Attribute> childModifiers = childEntity.Attributes
                 .Where(a => a.Type == AttributeType.Modifier);
 
             foreach (Attribute mod in childModifiers)
             {
-                switch (mod.Config.Propagation)
+                switch (mod.Propagation)
                 {
                     case ModifierPropagation.Parent:
                         RemoveSingleModifierFromThisEntity(mod);
@@ -255,48 +313,95 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Adds a single modifier to this entity's matching attribute.
+        /// Official way to add a brand new Attribute to this entity at runtime.
+        /// This sets the attribute's Parent to this Entity and updates the dictionary.
+        /// </summary>
+        public Attribute AddAttribute(Attribute attribute)
+        {
+            if (attribute == null) return null;
+
+            // Ensure the Attribute knows its parent
+            attribute.Parent = this;
+
+            // Add to the data list
+            Config.Data.attributes.Add(attribute);
+
+            // Also store/update in the lookup
+            attributesLookup[attribute.Config] = attribute;
+
+            // If we had a read-only wrapper, re-create it so it reflects new items
+            readOnlyAttributes = null;
+
+            return attribute;
+        }
+
+        /// <summary>
+        /// Official way to remove an existing Attribute from this entity at runtime.
+        /// This unsets the attribute's Parent and updates the dictionary.
+        /// </summary>
+        public bool RemoveAttribute(Attribute attribute)
+        {
+            if (attribute == null) return false;
+
+            bool removed = Config.Data.attributes.Remove(attribute);
+            if (removed)
+            {
+                // Unset the parent
+                attribute.Parent = null;
+
+                // Remove from our lookup if it references this exact Attribute
+                if (attributesLookup.TryGetValue(attribute.Config, out Attribute existing) && existing == attribute)
+                {
+                    attributesLookup.Remove(attribute.Config);
+                }
+
+                // Refresh read-only collection
+                readOnlyAttributes = null;
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// Helper function that adds a single modifier to this entity's matching attribute (or creates one if forced).
         /// </summary>
         private void AddSingleModifierToThisEntity(Attribute mod)
         {
-            // Tenta encontrar um Attribute de mesmo Config.
+            // Look for an existing attribute with the same config
             Attribute targetAttribute = GetAttributeByID(mod.Config, !mod.ForceApplyIfMissing);
 
-            // Se não existe e a flag estiver ligada, criamos dinamicamente
+            // If not found, and forced, create one
             if (targetAttribute == null)
             {
                 if (mod.ForceApplyIfMissing)
                 {
                     targetAttribute = new Attribute(this, mod.Config)
                     {
-                        Type = AttributeType.Attribute // Normalmente criamos como 'Attribute', não 'Modifier'
+                        Type = AttributeType.Attribute
                     };
-            
-                    // Adiciona na lista de atributos desta Entity
-                    AllAttributes.Add(targetAttribute);
+                    AddAttribute(targetAttribute);
                 }
                 else
                 {
-                    // Se a flag não estiver ligada, não aplicamos nada
                     return;
                 }
             }
 
-            // Agora, com o 'targetAttribute' garantido, adicionamos o 'mod'
+            // Now apply the modifier
             targetAttribute.AddModifier(mod);
         }
 
         /// <summary>
-        /// Removes a single modifier from this entity's matching attribute.
+        /// Helper function that removes a single modifier from this entity's matching attribute, if it exists.
         /// </summary>
         private void RemoveSingleModifierFromThisEntity(Attribute mod)
         {
-            Attribute targetAttribute = GetAttributeByID(mod.Config);
+            Attribute targetAttribute = GetAttributeByID(mod.Config, false);
             targetAttribute?.RemoveModifier(mod);
         }
 
         /// <summary>
-        /// Recursively adds a single modifier to all child entities in the tree.
+        /// Recursively applies a single modifier to all child entities.
         /// </summary>
         private void AddSingleModifierToChildren(Attribute mod, List<IMultiParentTreeNode> children)
         {
@@ -307,31 +412,27 @@ namespace LegendaryTools.Systems
                 IMultiParentTreeNode node = queue.Dequeue();
                 if (node is Entity childEntity)
                 {
-                    // Pega o atributo correspondente no filho
                     Attribute targetAttribute = childEntity.GetAttributeByID(mod.Config, !mod.ForceApplyIfMissing);
 
                     if (targetAttribute == null)
                     {
-                        // Se a flag estiver ativa, cria dinamicamente
                         if (mod.ForceApplyIfMissing)
                         {
                             targetAttribute = new Attribute(childEntity, mod.Config)
                             {
                                 Type = AttributeType.Attribute
                             };
-                            childEntity.AllAttributes.Add(targetAttribute);
+                            childEntity.AddAttribute(targetAttribute);
                         }
                         else
                         {
-                            // Se não existe e a flag não está ativa, não aplicamos nada
                             continue;
                         }
                     }
 
-                    // Agora adicionamos o modificador
                     targetAttribute.AddModifier(mod);
 
-                    // Enfileira os filhos recursivamente
+                    // Enqueue the child's children
                     foreach (IMultiParentTreeNode grandchild in childEntity.ChildNodes)
                     {
                         queue.Enqueue(grandchild);
@@ -341,7 +442,7 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        /// Recursively removes a single modifier from all child entities in the tree.
+        /// Recursively removes a single modifier from all child entities.
         /// </summary>
         private void RemoveSingleModifierFromChildren(Attribute mod, List<IMultiParentTreeNode> children)
         {
@@ -352,7 +453,7 @@ namespace LegendaryTools.Systems
                 IMultiParentTreeNode node = queue.Dequeue();
                 if (node is Entity childEntity)
                 {
-                    Attribute targetAttribute = childEntity.GetAttributeByID(mod.Config);
+                    Attribute targetAttribute = childEntity.GetAttributeByID(mod.Config, false);
                     targetAttribute?.RemoveModifier(mod);
 
                     foreach (IMultiParentTreeNode grandchild in childEntity.ChildNodes)

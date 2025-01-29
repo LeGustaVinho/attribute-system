@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR && ODIN_INSPECTOR
 using Sirenix.OdinInspector;
 #endif
@@ -12,31 +11,6 @@ using UnityEditor;
 
 namespace LegendaryTools.Systems
 {
-    public enum AttributeType
-    {
-        Attribute,
-        Modifier
-    }
-
-    public enum AttributeModOperator
-    {
-        Equals,
-        Greater,
-        Less,
-        GreaterOrEquals,
-        LessOrEquals,
-        NotEquals,
-        ContainsFlag,
-        NotContainsFlag
-    }
-
-    public enum AttributeFlagModOperator
-    {
-        AddFlag,
-        RemoveFlag,
-        Set
-    }
-
     [Serializable]
     public class Attribute
     {
@@ -45,9 +19,15 @@ namespace LegendaryTools.Systems
 
         public float Flat;
         public float Factor;
-        
-        // Permite forçar a aplicação do Modifier
-        // mesmo que a Entity não possua um Attribute com o mesmo Config.
+
+        /// <summary>
+        /// Defines how a modifier is propagated when applied to an attribute.
+        /// </summary>
+        public ModifierPropagation Propagation = ModifierPropagation.Parent;
+
+        /// <summary>
+        /// Allows you to force the application of the Modifier even if the Entity does not have an Attribute with the same Config.
+        /// </summary>
         public bool ForceApplyIfMissing = false;
 
         public float CurrentValue
@@ -58,15 +38,22 @@ namespace LegendaryTools.Systems
 
         [SerializeField] [HideInInspector] private float currentValue;
 
-        //List the conditions that this modifier needs to find to be applied
+        /// <summary>
+        /// List the conditions that this modifier needs to find to be applied.
+        /// </summary>
         public List<AttributeCondition> ModifierConditions = new List<AttributeCondition>();
 
+        /// <summary>
+        /// Determines how flags are modified if this Attribute uses flag options.
+        /// </summary>
         public AttributeFlagModOperator FlagOperator = AttributeFlagModOperator.AddFlag;
 
-        //Lists all modifiers that are currently changing this attribute
+        /// <summary>
+        /// All modifiers currently applied to this Attribute.
+        /// </summary>
         public List<Attribute> Modifiers = new List<Attribute>();
 
-        public IEntity Parent { get; protected set; }
+        public IEntity Parent { get; protected internal set; }
 
         public int FlatAsOptionIndex
         {
@@ -80,8 +67,11 @@ namespace LegendaryTools.Systems
             set => Flat = value;
         }
 
-        //Returns the current value of the attribute taking into account all modifiers currently applied
+        /// <summary>
+        /// Returns the current value of the Attribute considering its modifiers.
+        /// </summary>
         public float Value => GetValueWithModifiers();
+
         public bool ValueAsBool => Convert.ToBoolean(Value);
         public short ValueAsShort => Convert.ToInt16(Value);
         public int ValueAsInt => Convert.ToInt32(Value);
@@ -92,10 +82,10 @@ namespace LegendaryTools.Systems
             get
             {
                 if (Config == null) return string.Empty;
-                if (Config.Options == null) return string.Empty;
+                if (Config.Data.Options == null) return string.Empty;
                 int index = (int)GetValueWithModifiers();
-                if (index >= Config.Options.Length || index < 0) return string.Empty;
-                return Config.Options[index];
+                if (index >= Config.Data.Options.Length || index < 0) return string.Empty;
+                return Config.Data.Options[index];
             }
         }
 
@@ -103,8 +93,8 @@ namespace LegendaryTools.Systems
 
         public bool CanUseCapacity => HasCapacity && Type == AttributeType.Attribute && !HasOptions;
 
-        public bool HasOptions => Config?.HasOptions ?? false;
-        public bool OptionsAreFlags => Config?.OptionsAreFlags ?? false;
+        public bool HasOptions => Config?.Data.HasOptions ?? false;
+        public bool OptionsAreFlags => Config?.Data.OptionsAreFlags ?? false;
         public bool HasOptionsAndIsNotFlags => HasOptions && !OptionsAreFlags;
         public bool OptionsAreFlagsAndIsModifier => OptionsAreFlags && Type == AttributeType.Modifier;
 
@@ -115,10 +105,10 @@ namespace LegendaryTools.Systems
             {
                 ValueDropdownList<int> valueDropDownList = new ValueDropdownList<int>();
                 if (Config == null) return valueDropDownList;
-                if (Config.Options == null) return valueDropDownList;
-                for (int index = 0; index < Config.Options.Length; index++)
+                if (Config.Data.Options == null) return valueDropDownList;
+                for (int index = 0; index < Config.Data.Options.Length; index++)
                 {
-                    valueDropDownList.Add(Config.Options[index], index);
+                    valueDropDownList.Add(Config.Data.Options[index], index);
                 }
 
                 return valueDropDownList;
@@ -130,29 +120,28 @@ namespace LegendaryTools.Systems
             get
             {
                 if (Config == null) return new string[2] { "None", "Everything" };
-                if (Config.Options == null) return new string[2] { "None", "Everything" };
+                if (Config.Data.Options == null) return new string[2] { "None", "Everything" };
 
-                return Config.Options;
+                return Config.Data.Options;
             }
         }
 #endif
-
-        public bool HasCapacity => Config?.HasCapacity ?? false;
+        public bool HasCapacity => Config?.Data.HasCapacity ?? false;
         public bool HasParent => Parent != null;
 
         public event Action<Attribute> OnAttributeModAdd;
         public event Action<Attribute> OnAttributeModRemove;
         public event Action<float, float> OnAttributeCapacityChange;
-
+        
 #if UNITY_EDITOR && ODIN_INSPECTOR
         private int DrawFlatAsOptionFlag(int value, GUIContent label)
         {
-            if (Config != null && Config.HasOptions && Config.OptionsAreFlags)
+            if (Config != null && Config.Data.HasOptions && Config.Data.OptionsAreFlags)
             {
                 int flagResult = label == null
                     ? EditorGUILayout.MaskField(value, EditorOptionsArray)
                     : EditorGUILayout.MaskField(label, value, EditorOptionsArray);
-                return flagResult == -1 ? Config.FlagOptionEverythingValue : flagResult;
+                return flagResult == -1 ? Config.Data.FlagOptionEverythingValue : flagResult;
             }
 
             return 0;
@@ -160,17 +149,17 @@ namespace LegendaryTools.Systems
 
         private int DrawValueAsOptionFlag(int value, GUIContent label)
         {
-            if (Config != null && Config.HasOptions && Config.OptionsAreFlags)
+            if (Config != null && Config.Data.HasOptions && Config.Data.OptionsAreFlags)
             {
                 GUI.enabled = false;
                 if (label == null)
                 {
-                    EditorGUILayout.MaskField(value == -1 ? Config.FlagOptionEverythingValue : value,
+                    EditorGUILayout.MaskField(value == -1 ? Config.Data.FlagOptionEverythingValue : value,
                         EditorOptionsArray);
                 }
                 else
                 {
-                    EditorGUILayout.MaskField(label, value == -1 ? Config.FlagOptionEverythingValue : value,
+                    EditorGUILayout.MaskField(label, value == -1 ? Config.Data.FlagOptionEverythingValue : value,
                         EditorOptionsArray);
                 }
 
@@ -180,10 +169,21 @@ namespace LegendaryTools.Systems
             return 0;
         }
 #endif
+
         public Attribute(IEntity parent, AttributeConfig config)
         {
             Parent = parent;
             Config = config;
+        }
+        
+        /// <summary>
+        /// Should only be used in Unit Tests
+        /// </summary>
+        public Attribute(IEntity parent, AttributeData data, string attributeConfigName = "")
+        {
+            Parent = parent;
+            Config = AttributeSystemFactory.CreateAttributeConfig(data);
+            Config.name = attributeConfigName;
         }
 
         public bool AddModifier(Attribute modifier)
@@ -224,71 +224,96 @@ namespace LegendaryTools.Systems
                 OnAttributeModRemove?.Invoke(attr);
             }
         }
-        public bool AddUsage(float valueToAdd)
+
+        /// <summary>
+        /// Attempts to add <paramref name="valueToAdd"/> to this attribute's capacity.
+        /// Instead of logging errors/warnings, returns an enum describing the result of the call.
+        /// </summary>
+        /// <param name="valueToAdd">The amount of capacity to add.</param>
+        /// <returns>An <see cref="AttributeUsageStatus"/> describing the outcome.</returns>
+        public AttributeUsageStatus AddUsage(float valueToAdd)
         {
+            // 1) Check if capacity usage is supported by this Attribute.
             if (!CanUseCapacity)
             {
-                Debug.LogError("Cannot use capacity: either capacity is disabled or the attribute type does not support it.");
-                return false;
+                return AttributeUsageStatus.ErrorNoCapacity;
             }
 
+            // 2) Negative values are invalid for usage addition.
             if (valueToAdd < 0)
             {
-                Debug.LogError("Cannot add a negative value to capacity.");
-                return false;
+                return AttributeUsageStatus.ErrorNegativeValue;
             }
 
+            // 3) Calculate the new capacity.
             float newCapacity = CurrentValue + valueToAdd;
+            // Default status is success, but we may override it if we need to clamp or if an error occurs.
+            AttributeUsageStatus status = AttributeUsageStatus.Success;
 
-            if (!Config.AllowExceedCapacity && newCapacity > Value)
+            // 4) Check if exceeding capacity is allowed. If not, clamp to the maximum (Value).
+            if (!Config.Data.AllowExceedCapacity && newCapacity > Value)
             {
-                Debug.LogWarning("Addition exceeds the maximum capacity. Clamping to maximum.");
                 newCapacity = Value;
+                status = AttributeUsageStatus.WarningClampedToMax;
             }
 
-            if (newCapacity < Config.MinCapacity)
+            // 5) If the new capacity is still below the allowed minimum, reject the operation.
+            if (newCapacity < Config.Data.MinCapacity)
             {
-                Debug.LogError("New capacity is below the minimum allowed capacity.");
-                return false;
+                return AttributeUsageStatus.ErrorBelowMinimum;
             }
 
+            // 6) All is good; apply the change and fire the event.
             float previousCapacity = CurrentValue;
             CurrentValue = newCapacity;
             OnAttributeCapacityChange?.Invoke(CurrentValue, previousCapacity);
 
-            return true;
+            return status;
         }
 
-        public bool RemoveUsage(float valueToRemove)
+        /// <summary>
+        /// Attempts to remove <paramref name="valueToRemove"/> from this attribute's capacity.
+        /// Instead of logging errors/warnings, returns an enum describing the result of the call.
+        /// </summary>
+        /// <param name="valueToRemove">The amount of capacity to remove.</param>
+        /// <returns>An <see cref="AttributeUsageStatus"/> describing the outcome.</returns>
+        public AttributeUsageStatus RemoveUsage(float valueToRemove)
         {
+            // 1) Check if capacity usage is supported by this Attribute.
             if (!CanUseCapacity)
             {
-                Debug.LogError("Cannot use capacity: either capacity is disabled or the attribute type does not support it.");
-                return false;
+                return AttributeUsageStatus.ErrorNoCapacity;
             }
 
+            // 2) Negative values are invalid for usage removal.
             if (valueToRemove < 0)
             {
-                Debug.LogError("Cannot remove a negative value from capacity.");
-                return false;
+                return AttributeUsageStatus.ErrorNegativeValue;
             }
 
+            // 3) Calculate the new capacity.
             float newCapacity = CurrentValue - valueToRemove;
+            // Default status to success unless we have to clamp.
+            AttributeUsageStatus status = AttributeUsageStatus.Success;
 
-            if (newCapacity < Config.MinCapacity)
+            // 4) If removing value causes capacity to fall below the minimum, clamp and mark as a warning.
+            if (newCapacity < Config.Data.MinCapacity)
             {
-                Debug.LogWarning("Removal causes capacity to fall below the minimum. Clamping to minimum.");
-                newCapacity = Config.MinCapacity;
+                newCapacity = Config.Data.MinCapacity;
+                status = AttributeUsageStatus.WarningClampedToMinimum;
             }
 
+            // 5) Apply the change and fire event.
             float previousCapacity = CurrentValue;
             CurrentValue = newCapacity;
             OnAttributeCapacityChange?.Invoke(CurrentValue, previousCapacity);
 
-            return true;
+            return status;
         }
 
-        /// Checks whether the mod can be applied to the target entity
+        /// <summary>
+        /// Checks whether the provided <paramref name="attributeModifier"/> can be applied on this Attribute's Parent (IEntity).
+        /// </summary>
         public bool ModApplicationCanBeAccepted(Attribute attributeModifier)
         {
             if (attributeModifier == null)
@@ -328,7 +353,7 @@ namespace LegendaryTools.Systems
         }
 
         /// <summary>
-        ///     Calculates the current value of the attribute, incorporating all modifiers and configuration rules.
+        /// Calculates the current value of the attribute, incorporating all modifiers.
         /// </summary>
         /// <remarks>
         ///     The method accounts for flat and factor values of modifiers, options, flag operations, and configuration
@@ -364,10 +389,10 @@ namespace LegendaryTools.Systems
                         // Apply bitwise operations based on the modifier's flag operator.
                         switch (modifier.FlagOperator)
                         {
-                            case AttributeFlagModOperator.AddFlag when Config.OptionsAreFlags:
+                            case AttributeFlagModOperator.AddFlag when Config.Data.OptionsAreFlags:
                                 currentFlag = FlagUtil.Add(currentFlag, modifier.Flat);
                                 break;
-                            case AttributeFlagModOperator.RemoveFlag when Config.OptionsAreFlags:
+                            case AttributeFlagModOperator.RemoveFlag when Config.Data.OptionsAreFlags:
                                 currentFlag = FlagUtil.Remove(currentFlag, modifier.Flat);
                                 break;
                             case AttributeFlagModOperator.Set:
@@ -385,10 +410,9 @@ namespace LegendaryTools.Systems
                 return currentFlag;
             }
 
-            // Sort modifiers by factor in descending order because we want to apply modifier with high values first
+            // Sort modifiers by factor in descending order so that big factor values are applied first.
             allRecursiveModifiers.Sort((a, b) => -1 * a.Factor.CompareTo(b.Factor));
 
-            // Calculate the total flat and factor values from all modifiers.
             float totalFlat = 0;
             float totalFactor = 0;
 
@@ -396,12 +420,12 @@ namespace LegendaryTools.Systems
             {
                 totalFlat += allRecursiveModifiers[i].Flat;
 
-                if (Config.HasStackPenault)
+                if (Config.Data.HasStackPenault)
                 {
-                    // Apply stack penalties to the factor value.
+                    // Apply stack penalties to the factor value, if configured.
                     totalFactor += allRecursiveModifiers[i].Factor *
-                                   Config.StackPenaults[
-                                       Mathf.Clamp(i, 0, Config.StackPenaults.Length - 1)];
+                                   Config.Data.StackPenaults[
+                                       Mathf.Clamp(i, 0, Config.Data.StackPenaults.Length - 1)];
                 }
                 else
                 {
@@ -409,13 +433,17 @@ namespace LegendaryTools.Systems
                 }
             }
 
-            // Compute the final value
             float finalValue = (Flat + totalFlat) * (1 + Factor + totalFactor);
 
             // Clamp the result within the min and max range if configured.
-            return Config.HasMinMax ? Mathf.Clamp(finalValue, Config.MinMaxValue.x, Config.MinMaxValue.y) : finalValue;
+            return Config.Data.HasMinMax
+                ? Mathf.Clamp(finalValue, Config.Data.MinMaxValue.x, Config.Data.MinMaxValue.y)
+                : finalValue;
         }
-        
+
+        /// <summary>
+        /// Gathers all modifiers recursively into <paramref name="allModifiers"/>.
+        /// </summary>
         private void GetModifiersRecursive(List<Attribute> allModifiers)
         {
             if (Modifiers.Count > 0)

@@ -33,9 +33,14 @@ namespace LegendaryTools.Systems.OdinInspector
             
             if (member.Name == nameof(Attribute.ForceApplyIfMissing))
             {
-                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor"));
                 attributes.Add(new ShowIfAttribute(nameof(Attribute.Type), AttributeType.Modifier));
-                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor", width: 200));
+                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor"));
+            }
+            
+            if (member.Name == nameof(Attribute.Propagation))
+            {
+                attributes.Add(new ShowIfAttribute(nameof(Attribute.Type), AttributeType.Modifier));
+                attributes.Add(new HorizontalGroupAttribute("Value/ValueFactor", width: 250));
             }
             
             if (member.Name == nameof(Attribute.Flat) ||
