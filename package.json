@@ -1,7 +1,7 @@
 {
   "name": "com.legustavinho.legendary-tools-attribute-system",
   "displayName": "Legendary Tools - Attribute System",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "unity": "2019.4",
   "type": "library",
   "keywords": [],
@@ -11,8 +11,8 @@
     "url": "git+https://github.com/LeGustaVinho/attribute-system.git"
   },
   "dependencies": {
-    "com.legustavinho.legendary-tools-common": "1.0.5",
-    "com.legustavinho.legendary-tools-graphs" : "2.0.1"
+    "com.legustavinho.legendary-tools-common": "1.3.7",
+    "com.legustavinho.legendary-tools-graphs" : "2.1.1"
   },
   "author": {
     "name": "LeGustaVinho",
