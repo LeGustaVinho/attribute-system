@@ -1,7 +1,7 @@
 ﻿using LegendaryTools.TagSystem;
 using UnityEngine;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     public static class AttributeSystemFactory
     {

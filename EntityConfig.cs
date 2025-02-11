@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using LegendaryTools.TagSystem;
 using UnityEngine;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [CreateAssetMenu(fileName = "EntityConfig", menuName = "Tools/AttributeSystem/EntityConfig")]
     public class EntityConfig : 

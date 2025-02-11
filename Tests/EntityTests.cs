@@ -4,7 +4,7 @@ using LegendaryTools.GraphV2;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools; // for LogAssert
-using LegendaryTools.Systems;
+using LegendaryTools.AttributeSystem;
 using LegendaryTools.TagSystem;
 
 namespace Tests
@@ -71,7 +71,7 @@ namespace Tests
 
             // Create a new attribute using its (IEntity parent, AttributeData data) constructor
             AttributeData attData = new AttributeData(); 
-            var attribute = new LegendaryTools.Systems.Attribute(testEntity, attData);
+            var attribute = new LegendaryTools.AttributeSystem.Attribute(testEntity, attData);
 
             // Act
             testEntity.AddAttribute(attribute);
@@ -96,7 +96,7 @@ namespace Tests
 
             // Create and add an Attribute
             AttributeData attData = new AttributeData();
-            var attribute = new LegendaryTools.Systems.Attribute(testEntity, attData);
+            var attribute = new LegendaryTools.AttributeSystem.Attribute(testEntity, attData);
             testEntity.AddAttribute(attribute);
 
             // Sanity check

@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
 using System.Collections.Generic;
-using LegendaryTools.Systems;
+using LegendaryTools.AttributeSystem;
 using LegendaryTools.TagSystem;
 
 namespace Tests

@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
-using LegendaryTools.Systems;
+using LegendaryTools.AttributeSystem;
 using LegendaryTools.TagSystem;
 using System.Linq;
 using System.Collections.Generic;
@@ -213,7 +213,7 @@ namespace Tests
 
             // Create a child's attribute that is a "modifier"
             AttributeData attData = new AttributeData();
-            var childModifier = new LegendaryTools.Systems.Attribute(childEntity, attData)
+            var childModifier = new LegendaryTools.AttributeSystem.Attribute(childEntity, attData)
             {
                 Type = AttributeType.Modifier,
                 Propagation = ModifierPropagation.Parent
@@ -259,7 +259,7 @@ namespace Tests
             child.Initialize(manager, new EntityData());
 
             AttributeData modData = new AttributeData();
-            var childMod = new LegendaryTools.Systems.Attribute(child, modData)
+            var childMod = new LegendaryTools.AttributeSystem.Attribute(child, modData)
             {
                 Type = AttributeType.Modifier,
                 Propagation = ModifierPropagation.Parent
@@ -297,7 +297,7 @@ namespace Tests
 
             // Create an attribute
             AttributeData attData = new AttributeData();
-            var attr = new LegendaryTools.Systems.Attribute(entity, attData);
+            var attr = new LegendaryTools.AttributeSystem.Attribute(entity, attData);
 
             // Act: Add
             entity.AddAttribute(attr);
@@ -335,7 +335,7 @@ namespace Tests
 
             // We'll create one attribute for the entity, so we have something to find
             var attrData = new AttributeData();
-            var attr = new LegendaryTools.Systems.Attribute(entity, attrData);
+            var attr = new LegendaryTools.AttributeSystem.Attribute(entity, attrData);
             entity.AddAttribute(attr);
 
             // We'll attempt to do lookups by the attr.Config
@@ -391,14 +391,14 @@ namespace Tests
             srcEntity.Initialize(manager, new EntityData());
 
             var normalData = new AttributeData();
-            var normalAttr = new LegendaryTools.Systems.Attribute(srcEntity, normalData, "Normal")
+            var normalAttr = new LegendaryTools.AttributeSystem.Attribute(srcEntity, normalData, "Normal")
             {
                 Type = AttributeType.Attribute
             };
             srcEntity.AddAttribute(normalAttr);
 
             var modDataA = new AttributeData();
-            var modAttrA = new LegendaryTools.Systems.Attribute(srcEntity, modDataA, "A")
+            var modAttrA = new LegendaryTools.AttributeSystem.Attribute(srcEntity, modDataA, "A")
             {
                 Type = AttributeType.Modifier,
                 ForceApplyIfMissing = false
@@ -406,7 +406,7 @@ namespace Tests
             srcEntity.AddAttribute(modAttrA);
 
             var modDataB = new AttributeData();
-            var modAttrB = new LegendaryTools.Systems.Attribute(srcEntity, modDataB, "B")
+            var modAttrB = new LegendaryTools.AttributeSystem.Attribute(srcEntity, modDataB, "B")
             {
                 Type = AttributeType.Modifier,
                 ForceApplyIfMissing = true // will force creation if missing
@@ -461,7 +461,7 @@ namespace Tests
             Entity child = new Entity();
             child.Initialize(manager, new EntityData());
 
-            var modParent = new LegendaryTools.Systems.Attribute(child, new AttributeData())
+            var modParent = new LegendaryTools.AttributeSystem.Attribute(child, new AttributeData())
             {
                 Type = AttributeType.Modifier,
                 Propagation = ModifierPropagation.Parent,
@@ -469,7 +469,7 @@ namespace Tests
             };
             child.AddAttribute(modParent);
 
-            var modChild = new LegendaryTools.Systems.Attribute(child, new AttributeData())
+            var modChild = new LegendaryTools.AttributeSystem.Attribute(child, new AttributeData())
             {
                 Type = AttributeType.Modifier,
                 Propagation = ModifierPropagation.Child,
@@ -477,7 +477,7 @@ namespace Tests
             };
             child.AddAttribute(modChild);
 
-            var modBoth = new LegendaryTools.Systems.Attribute(child, new AttributeData())
+            var modBoth = new LegendaryTools.AttributeSystem.Attribute(child, new AttributeData())
             {
                 Type = AttributeType.Modifier,
                 Propagation = ModifierPropagation.Both,

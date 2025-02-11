@@ -1,4 +1,4 @@
-﻿namespace LegendaryTools.Systems
+﻿namespace LegendaryTools.AttributeSystem
 {
     /// <summary>
     /// Results that can be returned by calls that manipulate Attribute capacity.

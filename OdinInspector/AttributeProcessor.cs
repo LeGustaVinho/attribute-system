@@ -4,9 +4,9 @@ using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 
-namespace LegendaryTools.Systems.OdinInspector
+namespace LegendaryTools.AttributeSystem.OdinInspector
 {
-    public class AttributeProcessor : OdinAttributeProcessor<LegendaryTools.Systems.Attribute>
+    public class AttributeProcessor : OdinAttributeProcessor<Attribute>
     {
         public override void ProcessChildMemberAttributes(InspectorProperty parentProperty, MemberInfo member, List<System.Attribute> attributes)
         {

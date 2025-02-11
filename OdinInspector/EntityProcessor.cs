@@ -4,7 +4,7 @@ using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 
-namespace LegendaryTools.Systems.OdinInspector
+namespace LegendaryTools.AttributeSystem.OdinInspector
 {
     public class EntityProcessor : OdinAttributeProcessor<Entity>
     {

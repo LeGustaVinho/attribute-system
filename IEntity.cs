@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using LegendaryTools.TagSystem;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     public interface IEntity : ITaggable
     {

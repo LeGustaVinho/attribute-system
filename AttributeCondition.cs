@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     public enum AttributeConditionOperator
     {

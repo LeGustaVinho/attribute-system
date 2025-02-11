@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using LegendaryTools.TagSystem;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [Serializable]
     public class EntityData

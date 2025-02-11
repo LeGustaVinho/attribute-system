@@ -1,0 +1,19 @@
+{
+    "name": "LegendaryTools.AttributeSystem.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:b1b4237af29177540b458fd1a209c941",
+        "GUID:2247f345c1389cb428906dc038800b93"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

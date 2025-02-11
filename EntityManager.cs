@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using LegendaryTools.GraphV2;
 using LegendaryTools.TagSystem;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     public class EntityManager : MultiParentTree
     {

@@ -9,7 +9,7 @@ using Sirenix.OdinInspector;
 using UnityEditor;
 #endif
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [Serializable]
     public class Attribute

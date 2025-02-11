@@ -6,7 +6,7 @@ using LegendaryTools.GraphV2;
 using LegendaryTools.TagSystem;
 using UnityEngine;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [Serializable]
     public class Entity : MultiParentTreeNode, IEntity

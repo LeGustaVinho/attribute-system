@@ -6,7 +6,7 @@ using UnityEngine;
 using Sirenix.OdinInspector;
 #endif
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [Serializable]
     public class AttributeModifierCondition

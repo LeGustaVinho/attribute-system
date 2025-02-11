@@ -1,4 +1,4 @@
-﻿namespace LegendaryTools.Systems
+﻿namespace LegendaryTools.AttributeSystem
 {
     /// <summary>
     /// Defines how modifiers propagate when an AttributeSystem is added as a child to another.

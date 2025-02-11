@@ -1,4 +1,4 @@
-﻿namespace LegendaryTools.Systems
+﻿namespace LegendaryTools.AttributeSystem
 {
     public enum AttributeFlagModOperator
     {

@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 using UnityEngine;
-using LegendaryTools.Systems;
+using LegendaryTools.AttributeSystem;
 using LegendaryTools.TagSystem;
 using System.Collections.Generic;
 
@@ -70,7 +70,7 @@ namespace Tests
         {
             // 1) Setup a real attribute in the entity so we can test comparisons
             var data = new AttributeData();
-            var attA = new LegendaryTools.Systems.Attribute(testEntity, data) { Flat = 10f };
+            var attA = new LegendaryTools.AttributeSystem.Attribute(testEntity, data) { Flat = 10f };
             testEntity.AddAttribute(attA);
 
             // 2) Create an AttributeCondition with multiple conditions referencing attA's config
@@ -117,7 +117,7 @@ namespace Tests
         {
             // Setup an attribute
             var data = new AttributeData();
-            var attB = new LegendaryTools.Systems.Attribute(testEntity, data) { Flat = 10f };
+            var attB = new LegendaryTools.AttributeSystem.Attribute(testEntity, data) { Flat = 10f };
             testEntity.AddAttribute(attB);
 
             var conditionAny = new AttributeCondition
@@ -164,7 +164,7 @@ namespace Tests
         {
             // We'll create an attribute with Value=10
             var data = new AttributeData();
-            var att = new LegendaryTools.Systems.Attribute(testEntity, data) { Flat = 10f };
+            var att = new LegendaryTools.AttributeSystem.Attribute(testEntity, data) { Flat = 10f };
             testEntity.AddAttribute(att);
 
             // We'll systematically check each operator
@@ -241,7 +241,7 @@ namespace Tests
                 Options = new [] {"1", "2", "3", "4", "5", "6", "7"},
                 OptionsAreFlags = true
             };
-            var attFlag = new LegendaryTools.Systems.Attribute(testEntity, data) { Flat = 5f };
+            var attFlag = new LegendaryTools.AttributeSystem.Attribute(testEntity, data) { Flat = 5f };
             testEntity.AddAttribute(attFlag);
 
             // Test => ContainsFlag => e.g. "0101 has 0001 => pass"

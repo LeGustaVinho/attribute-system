@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace LegendaryTools.Systems
+namespace LegendaryTools.AttributeSystem
 {
     [Serializable]
     public class AttributeData
