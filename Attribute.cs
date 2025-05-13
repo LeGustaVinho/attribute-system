@@ -186,6 +186,11 @@ namespace LegendaryTools.AttributeSystem
             Config.name = attributeConfigName;
         }
 
+        public T GetValueAsOptionEnum<T>() where T : struct, Enum, IConvertible
+        {
+            return ValueAsInt.GetEnumValue<T>();
+        }
+        
         public bool AddModifier(Attribute modifier)
         {
             if (!ModApplicationCanBeAccepted(modifier))
